@@ -5,35 +5,22 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.AppDatabase
+import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.model.data.NewsItem
-import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
-import io.ktor.client.utils.EmptyContent
-import io.ktor.http.content.MultiPartData
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * NewsFeedViewModel with Cache Support
- *
- * CHANGES:
- * - Now extends AndroidViewModel (to pass context to Repository)
- * - Added cache-related states (isLoading, isRefreshing, cacheStatus)
- * - Added refreshNewsFeed() for pull-to-refresh
- * - Uses loadNewsFeedCached() for cache-first strategy
+ * NewsFeedViewModel with Cache Support and Category Filtering
  */
 class NewsFeedViewModel(
-    application: Application //  CAMBIO: ahora recibe Application
-) : AndroidViewModel(application) { //  CAMBIO: extiende AndroidViewModel
+    application: Application
+) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).CommentDao()
-    // CAMBIO: Repository ahora recibe context
     private val repository = Repository(application.applicationContext, dao)
 
     // EXISTING: News items state
@@ -41,18 +28,27 @@ class NewsFeedViewModel(
     val newsItems: StateFlow<List<NewsItem>> = _newsItems
 
     // ============================================
-    // NEW: Cache-related states
+    // NEW: Category filtering states
     // ============================================
 
-    // Loading state (for first load)
+    // Available categories
+    private val _categories = MutableStateFlow<List<Category>>(emptyList())
+    val categories: StateFlow<List<Category>> = _categories
+
+    // Selected category (null = show all)
+    private val _selectedCategory = MutableStateFlow<Category?>(null)
+    val selectedCategory: StateFlow<Category?> = _selectedCategory
+
+    // ============================================
+    // Cache-related states
+    // ============================================
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // Refreshing state (for pull-to-refresh)
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
-    // Cache status (for UI display)
     private val _cacheStatus = MutableStateFlow<String>("")
     val cacheStatus: StateFlow<String> = _cacheStatus
 
@@ -61,15 +57,61 @@ class NewsFeedViewModel(
     }
 
     init {
+        loadCategories()
         loadNewsItems()
     }
 
     /**
-     * UPDATED: Load news items with cache support
-     *
-     * Strategy:
-     * 1. Observe cached data (reactive with Flow)
-     * 2. Load fresh data if cache is empty or expired
+     * NEW: Load available categories from Supabase
+     */
+    private fun loadCategories() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Loading categories...")
+                val categoriesList = repository.getCategories()
+                _categories.value = categoriesList
+                Log.d(TAG, "Categories loaded: ${categoriesList.size}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading categories", e)
+                _categories.value = emptyList()
+            }
+        }
+    }
+
+    /**
+     * NEW: Select a category to filter news items
+     * Pass null to show all news items
+     */
+    fun selectCategory(category: Category?) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Selecting category: ${category?.name ?: "All"}")
+                _selectedCategory.value = category
+                loadNewsItems(forceRefresh = true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error selecting category", e)
+            }
+        }
+    }
+
+    /**
+     * NEW: Clear category filter (show all news)
+     */
+    fun clearCategoryFilter() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Clearing category filter...")
+                _selectedCategory.value = null
+                // Recargar todas las noticias inmediatamente
+                loadNewsItems(forceRefresh = true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error clearing category filter", e)
+            }
+        }
+    }
+
+    /**
+     * UPDATED: Load news items with optional category filter
      */
     private fun loadNewsItems(forceRefresh: Boolean = false) {
         viewModelScope.launch {
@@ -80,26 +122,35 @@ class NewsFeedViewModel(
                     _isLoading.value = true
                 }
 
-                Log.d(TAG, "Loading news items - forceRefresh: $forceRefresh")
+                val categoryId = _selectedCategory.value?.category_id
 
-                // NEW: Observe cached data (reactive)
-                val cachedItems = repository.getNewsFeedCached().first().let { cachedItems ->
-                    _newsItems.value = cachedItems
-                    Log.d(TAG, "News items updated from cache: ${cachedItems.size} items")
+                Log.d(TAG, "Loading news items - categoryId: $categoryId, forceRefresh: $forceRefresh")
 
-                    // Update cache status
-                    updateCacheStatus()
+                // Si estamos forzando refresh o el filtro cambió, cargar desde red
+                if (forceRefresh) {
+                    // Cargar desde la red según el filtro
+                    val freshItems = if (categoryId != null) {
+                        repository.getNewsItemsByCategory(categoryId)
+                    } else {
+                        repository.getNewsItems()
+                    }
+                    _newsItems.value = freshItems
+                    Log.d(TAG, "Fresh news items loaded: ${freshItems.size} items")
+                } else {
+                    // Usar caché y filtrar localmente
+                    val cachedItems = repository.getNewsFeedCached().first()
+
+                    val filteredItems = if (categoryId != null) {
+                        cachedItems.filter { it.category_id == categoryId }
+                    } else {
+                        cachedItems
+                    }
+
+                    _newsItems.value = filteredItems
+                    Log.d(TAG, "Cached news items filtered: ${filteredItems.size} items")
                 }
 
-                if (_newsItems.value.isEmpty()) {
-                    Log.d(TAG, "Cache is empty — fetching from database...")
-
-                    // 2️⃣ Si no hay datos en caché, cargar desde BD o red
-                    val dbItems = repository.getNewsItems() // tu función personalizada
-                    _newsItems.value = dbItems
-
-
-                }
+                updateCacheStatus()
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading news items", e)
@@ -111,10 +162,14 @@ class NewsFeedViewModel(
             }
         }
 
-        // NEW: Load data with cache strategy (in parallel)
+        // Cargar datos en caché de manera paralela
         viewModelScope.launch {
             try {
-                repository.loadNewsFeedCached(forceRefresh = forceRefresh)
+                val categoryId = _selectedCategory.value?.category_id
+                repository.loadNewsFeedWithFilter(
+                    categoryId = categoryId,
+                    forceRefresh = forceRefresh
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading cached news feed", e)
             }
@@ -122,8 +177,7 @@ class NewsFeedViewModel(
     }
 
     /**
-     * NEW: Refresh news feed (for pull-to-refresh)
-     * Forces fetching fresh data from Supabase
+     * Refresh news feed (for pull-to-refresh)
      */
     fun refreshNewsFeed() {
         Log.d(TAG, "Refreshing news feed...")
@@ -131,7 +185,7 @@ class NewsFeedViewModel(
     }
 
     /**
-     * NEW: Update cache status for UI display
+     * Update cache status for UI display
      */
     private suspend fun updateCacheStatus() {
         try {
@@ -148,14 +202,13 @@ class NewsFeedViewModel(
     }
 
     /**
-     * NEW: Clear cache manually (optional utility)
+     * Clear cache manually
      */
     fun clearCache() {
         viewModelScope.launch {
             try {
                 repository.clearCache()
                 _cacheStatus.value = "Cache cleared"
-                // Reload data after clearing
                 loadNewsItems(forceRefresh = true)
             } catch (e: Exception) {
                 Log.e(TAG, "Error clearing cache", e)
@@ -164,7 +217,7 @@ class NewsFeedViewModel(
     }
 
     /**
-     * EXISTING: Get category label (unchanged)
+     * Get category label by ID
      */
     fun getCategoryLabel(categoryId: Int): String = when (categoryId) {
         1 -> "Politics"

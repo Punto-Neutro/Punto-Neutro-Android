@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.sprint_2_kotlin.model.data.NewsItem
+import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.viewmodel.NewsFeedViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
@@ -38,38 +38,44 @@ fun NewsFeedScreen(
     viewModel: NewsFeedViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
-    // ============================================
-    // NEW: States for caching and loading
-    // ============================================
     val newsItems by viewModel.newsItems.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val cacheStatus by viewModel.cacheStatus.collectAsState()
-
-    // Existing states
-    var selectedCategory by remember { mutableStateOf("All") }
+    val categories by viewModel.categories.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-
 
     Scaffold(
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 4.dp,
+                color = Color.White
             ) {
-                // NEW: Cache status in header
-                FeedHeader(cacheStatus = cacheStatus)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                ) {
+                    FeedHeader(cacheStatus = cacheStatus)
 
-                SearchBar(
-                    query = searchQuery,
-                    onQueryChange = { searchQuery = it }
-                )
+                    SearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it }
+                    )
 
-                CategoryTabs(
-                    selectedCategory = selectedCategory,
-                    onCategorySelected = { selectedCategory = it }
-                )
+                    CategoryTabsFromSupabase(
+                        categories = categories,
+                        selectedCategory = selectedCategory,
+                        onCategorySelected = { category ->
+                            viewModel.selectCategory(category)
+                        },
+                        onClearFilter = {
+                            viewModel.clearCategoryFilter()
+                        }
+                    )
+                }
             }
         },
         bottomBar = {
@@ -79,16 +85,12 @@ fun NewsFeedScreen(
             )
         }
     ) { paddingValues ->
-        // ============================================
-        // NEW: SwipeRefresh wrapper for pull-to-refresh
-        // ============================================
         SwipeRefresh(
             state = rememberSwipeRefreshState(isRefreshing),
-            onRefresh = { viewModel.refreshNewsFeed() }, // NEW: Pull-to-refresh
+            onRefresh = { viewModel.refreshNewsFeed() },
             modifier = Modifier.padding(paddingValues)
         ) {
             if (isLoading && newsItems.isEmpty()) {
-                // NEW: Loading state for first load
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -106,7 +108,6 @@ fun NewsFeedScreen(
                     }
                 }
             } else if (newsItems.isEmpty() && !isLoading) {
-                // NEW: Empty state
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -122,7 +123,11 @@ fun NewsFeedScreen(
                             tint = Color(0xFFAAAAAA)
                         )
                         Text(
-                            "No news available",
+                            text = if (selectedCategory != null) {
+                                "No news in ${selectedCategory?.name} category"
+                            } else {
+                                "No news available"
+                            },
                             fontSize = 16.sp,
                             color = Color(0xFF666666)
                         )
@@ -139,7 +144,6 @@ fun NewsFeedScreen(
                     }
                 }
             } else {
-                // Existing news list
                 LazyColumn(
                     modifier = modifier
                         .fillMaxSize()
@@ -151,15 +155,26 @@ fun NewsFeedScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
+                    if (selectedCategory != null) {
+                        item {
+                            FilterInfoCard(
+                                categoryName = selectedCategory!!.name,
+                                itemCount = newsItems.size,
+                                onClearFilter = { viewModel.clearCategoryFilter() }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+
                     items(newsItems, key = { it.news_item_id }) { item ->
                         NewsCard(
                             item = item,
+                            categories = categories,
                             onClick = { onNewsItemClick(item.news_item_id) }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // NEW: Cache info footer
                     if (newsItems.isNotEmpty()) {
                         item {
                             Text(
@@ -179,7 +194,95 @@ fun NewsFeedScreen(
 }
 
 @Composable
-fun FeedHeader(cacheStatus: String = "") { // NEW: cacheStatus parameter
+fun CategoryTabsFromSupabase(
+    categories: List<Category>,
+    selectedCategory: Category?,
+    onCategorySelected: (Category) -> Unit,
+    onClearFilter: () -> Unit
+) {
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            CategoryChip(
+                text = "All",
+                selected = selectedCategory == null,
+                onClick = onClearFilter
+            )
+        }
+
+        items(categories) { category ->
+            CategoryChip(
+                text = category.name,
+                selected = selectedCategory?.category_id == category.category_id,
+                onClick = { onCategorySelected(category) }
+            )
+        }
+    }
+}
+
+@Composable
+fun FilterInfoCard(
+    categoryName: String,
+    itemCount: Int,
+    onClearFilter: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FilterList,
+                    contentDescription = "Filter",
+                    tint = Color(0xFF1976D2),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Filtered by: $categoryName",
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1976D2),
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = "$itemCount ${if (itemCount == 1) "article" else "articles"} found",
+                        fontSize = 11.sp,
+                        color = Color(0xFF1976D2)
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onClearFilter,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Clear filter",
+                    tint = Color(0xFF1976D2),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FeedHeader(cacheStatus: String = "") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -203,7 +306,6 @@ fun FeedHeader(cacheStatus: String = "") { // NEW: cacheStatus parameter
                     color = Color(0xFF1A1A1A)
                 )
             }
-            // NEW: Cache status display
             if (cacheStatus.isNotEmpty()) {
                 Text(
                     text = cacheStatus,
@@ -313,26 +415,6 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
 }
 
 @Composable
-fun CategoryTabs(selectedCategory: String, onCategorySelected: (String) -> Unit) {
-    val categories = listOf("All", "Tech", "Politics", "Health", "Security")
-
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(categories) { category ->
-            CategoryChip(
-                text = category,
-                selected = category == selectedCategory,
-                onClick = { onCategorySelected(category) }
-            )
-        }
-    }
-}
-
-@Composable
 fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
@@ -396,8 +478,13 @@ fun MisinformationAlert() {
 @Composable
 fun NewsCard(
     item: NewsItem,
+    categories: List<Category>,
     onClick: () -> Unit
 ) {
+    val itemCategory = categories.find { it.category_id == item.category_id }
+    val categoryName = itemCategory?.name ?: "General"
+    val categoryColor = getCategoryColorDynamic(item.category_id)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -427,10 +514,10 @@ fun NewsCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = getCategoryColor(item.category_id)
+                        color = categoryColor
                     ) {
                         Text(
-                            text = getCategoryName(item.category_id),
+                            text = categoryName,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             color = Color.White,
                             fontSize = 12.sp,
@@ -584,24 +671,16 @@ fun IconWithText(icon: androidx.compose.ui.graphics.vector.ImageVector, text: St
     }
 }
 
-fun getCategoryName(categoryId: Int): String {
-    return when (categoryId) {
-        1 -> "Technology"
-        2 -> "Politics"
-        3 -> "Health"
-        4 -> "Security"
-        5 -> "Science"
-        else -> "General"
-    }
-}
-
-fun getCategoryColor(categoryId: Int): Color {
+fun getCategoryColorDynamic(categoryId: Int): Color {
     return when (categoryId) {
         1 -> Color(0xFF2196F3)
         2 -> Color(0xFFE91E63)
         3 -> Color(0xFF4CAF50)
         4 -> Color(0xFFFF5722)
         5 -> Color(0xFF9C27B0)
+        6 -> Color(0xFF00BCD4)
+        7 -> Color(0xFFFF9800)
+        8 -> Color(0xFF607D8B)
         else -> Color(0xFF757575)
     }
 }
@@ -627,7 +706,7 @@ fun BottomNavigationBar(
             icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
             label = { Text("Home", fontSize = 12.sp) },
             selected = true,
-            onClick = { /* Already on Home */ }
+            onClick = { }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.MenuBook, contentDescription = "Guide") },

@@ -480,4 +480,94 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
         return RatingDistributionData(distributions, statistics)
     }
+    // ============================================
+// CATEGORY FILTERING FUNCTIONS
+// ============================================
+
+    /**
+     * Fetch all categories from Supabase
+     */
+    suspend fun getCategories(): List<Category> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Fetching categories from Supabase...")
+            val response = client.postgrest["categories"].select()
+            val categories = response.decodeList<Category>()
+            Log.d(TAG, "Categories loaded: ${categories.size}")
+            categories
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading categories", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetch news items filtered by category
+     */
+    suspend fun getNewsItemsByCategory(
+        categoryId: Int,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ): List<NewsItem> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Fetching news items for category: $categoryId")
+            val response = client.postgrest["news_items"].select {
+                filter {
+                    eq("category_id", categoryId)
+                }
+                range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+            }
+            val items = response.decodeList<NewsItem>()
+            Log.d(TAG, "News items loaded for category $categoryId: ${items.size}")
+            items
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news items for category $categoryId", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Load news feed with optional category filter (cached version)
+     */
+    suspend fun loadNewsFeedWithFilter(
+        categoryId: Int? = null,
+        forceRefresh: Boolean = false,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ) = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "loadNewsFeedWithFilter - categoryId: $categoryId, forceRefresh: $forceRefresh")
+
+            if (!forceRefresh && shouldUseCachedData()) {
+                Log.d(TAG, "Using cached data (cache is fresh)")
+                return@withContext
+            }
+
+            Log.d(TAG, "Fetching fresh data from Supabase...")
+
+            val freshNewsItems = if (categoryId != null) {
+                getNewsItemsByCategory(categoryId, pageSize, startRow)
+            } else {
+                getNewsItems(pageSize, startRow)
+            }
+
+            if (freshNewsItems.isEmpty()) {
+                Log.w(TAG, "No data received from Supabase")
+                return@withContext
+            }
+
+            if (forceRefresh) {
+                newsItemDao.deleteAllNewsItems()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+
+            val entities = freshNewsItems.map { it.toEntity() }
+            newsItemDao.insertAllNewsItems(entities)
+
+            Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news feed with filter", e)
+        }
+}
+
 }
