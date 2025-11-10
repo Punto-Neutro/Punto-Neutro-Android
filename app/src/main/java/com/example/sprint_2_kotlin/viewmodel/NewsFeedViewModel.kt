@@ -8,13 +8,18 @@ import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.repository.Repository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import utils.NetworkMonitor
 
 /**
- * NewsFeedViewModel with Cache Support and Category Filtering
+ * NewsFeedViewModel with Cache Support, Category Filtering, and Network Detection
+ *
+ * ✅ ENHANCED VERSION - Connection restored notification
  */
 class NewsFeedViewModel(
     application: Application
@@ -23,19 +28,20 @@ class NewsFeedViewModel(
     private val dao = AppDatabase.getDatabase(application).CommentDao()
     private val repository = Repository(application.applicationContext, dao)
 
+    // ✅ NEW: Network monitor to detect connection changes
+    private val networkMonitor = NetworkMonitor(application.applicationContext)
+
     // EXISTING: News items state
     private val _newsItems = MutableStateFlow<List<NewsItem>>(emptyList())
     val newsItems: StateFlow<List<NewsItem>> = _newsItems
 
     // ============================================
-    // NEW: Category filtering states
+    // Category filtering states
     // ============================================
 
-    // Available categories
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories
 
-    // Selected category (null = show all)
     private val _selectedCategory = MutableStateFlow<Category?>(null)
     val selectedCategory: StateFlow<Category?> = _selectedCategory
 
@@ -52,18 +58,141 @@ class NewsFeedViewModel(
     private val _cacheStatus = MutableStateFlow<String>("")
     val cacheStatus: StateFlow<String> = _cacheStatus
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    // ============================================
+    // ✅ NEW: Network connection states
+    // ============================================
+
+    /**
+     * Tracks if connection was just restored
+     * Shows green banner when true
+     */
+    private val _connectionRestored = MutableStateFlow(false)
+    val connectionRestored: StateFlow<Boolean> = _connectionRestored
+
+    /**
+     * Current network status
+     */
+    private val _isOnline = MutableStateFlow(true)
+    val isOnline: StateFlow<Boolean> = _isOnline
+
+    /**
+     * Track previous connection state to detect restoration
+     */
+    private var wasOffline = false
+
     companion object {
         private const val TAG = "NewsFeedViewModel"
     }
 
     init {
+        Log.d(TAG, "🚀 NewsFeedViewModel initialized")
+
+        // ✅ Start monitoring network changes
+        observeNetworkChanges()
+
+        // Start observing the Flow continuously FIRST
+        observeNewsFeedFlow()
+
+        // Load categories and initial news
         loadCategories()
         loadNewsItems()
     }
 
+    // ============================================
+    // ✅ NEW: NETWORK MONITORING
+    // ============================================
+
     /**
-     * NEW: Load available categories from Supabase
+     * ✅ NEW METHOD: Observes network connectivity changes
+     *
+     * Detects when connection is restored and triggers:
+     * 1. Green banner notification
+     * 2. Automatic refresh of news
+     * 3. Auto-hide banner after 3 seconds
      */
+    private fun observeNetworkChanges() {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { isConnected ->
+                _isOnline.value = isConnected
+
+                Log.d(TAG, "📡 Network status changed: ${if (isConnected) "ONLINE" else "OFFLINE"}")
+
+                if (isConnected && wasOffline) {
+                    // ✅ Connection was restored!
+                    Log.d(TAG, "🌐 Connection RESTORED - triggering auto-refresh")
+
+                    // Show green banner
+                    _connectionRestored.value = true
+
+                    // Clear error message
+                    _errorMessage.value = null
+
+                    // Auto-refresh news feed
+                    refreshNewsFeed()
+
+                    // Auto-hide banner after 3 seconds
+                    viewModelScope.launch {
+                        delay(3000)
+                        _connectionRestored.value = false
+                        Log.d(TAG, "✅ Connection restored banner auto-hidden")
+                    }
+                }
+
+                // Update offline tracking
+                wasOffline = !isConnected
+
+                // Update error message when going offline
+                if (!isConnected && _newsItems.value.isNotEmpty()) {
+                    _errorMessage.value = "No internet connection. Showing cached news."
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // CONTINUOUS FLOW OBSERVATION
+    // ============================================
+
+    /**
+     * Observes cache Flow continuously
+     */
+    private fun observeNewsFeedFlow() {
+        viewModelScope.launch {
+            Log.d(TAG, "📡 Starting continuous Flow observation...")
+
+            repository.getNewsFeedCached()
+                .catch { exception ->
+                    Log.e(TAG, "❌ Error in Flow observation", exception)
+                }
+                .collect { cachedItems ->
+                    // Apply category filter if selected
+                    val categoryId = _selectedCategory.value?.category_id
+                    val filteredItems = if (categoryId != null) {
+                        cachedItems.filter { it.category_id == categoryId }
+                    } else {
+                        cachedItems
+                    }
+
+                    _newsItems.value = filteredItems
+                    Log.d(TAG, "✅ Flow emitted: ${filteredItems.size} items (category: ${categoryId ?: "all"})")
+
+                    updateCacheStatus()
+
+                    // Clear error message if we have data and are online
+                    if (filteredItems.isNotEmpty() && _isOnline.value && _errorMessage.value != null) {
+                        _errorMessage.value = null
+                    }
+                }
+        }
+    }
+
+    // ============================================
+    // CATEGORY FUNCTIONS
+    // ============================================
+
     private fun loadCategories() {
         viewModelScope.launch {
             try {
@@ -78,10 +207,6 @@ class NewsFeedViewModel(
         }
     }
 
-    /**
-     * NEW: Select a category to filter news items
-     * Pass null to show all news items
-     */
     fun selectCategory(category: Category?) {
         viewModelScope.launch {
             try {
@@ -94,15 +219,11 @@ class NewsFeedViewModel(
         }
     }
 
-    /**
-     * NEW: Clear category filter (show all news)
-     */
     fun clearCategoryFilter() {
         viewModelScope.launch {
             try {
                 Log.d(TAG, "Clearing category filter...")
                 _selectedCategory.value = null
-                // Recargar todas las noticias inmediatamente
                 loadNewsItems(forceRefresh = true)
             } catch (e: Exception) {
                 Log.e(TAG, "Error clearing category filter", e)
@@ -110,88 +231,63 @@ class NewsFeedViewModel(
         }
     }
 
-    /**
-     * UPDATED: Load news items with optional category filter
-     */
+    // ============================================
+    // LOAD NEWS ITEMS
+    // ============================================
+
     private fun loadNewsItems(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             try {
                 if (forceRefresh) {
                     _isRefreshing.value = true
+                    Log.d(TAG, "🔄 Force refresh triggered")
                 } else {
                     _isLoading.value = true
+                    Log.d(TAG, "🔄 Loading news items")
                 }
 
+                _errorMessage.value = null
+
                 val categoryId = _selectedCategory.value?.category_id
+                Log.d(TAG, "Loading with categoryId: $categoryId, forceRefresh: $forceRefresh")
 
-                Log.d(TAG, "Loading news items - categoryId: $categoryId, forceRefresh: $forceRefresh")
-
-                // Si estamos forzando refresh o el filtro cambió, cargar desde red
-                if (forceRefresh) {
-                    // Cargar desde la red según el filtro
-                    val freshItems = if (categoryId != null) {
-                        repository.getNewsItemsByCategory(categoryId)
-                    } else {
-                        repository.getNewsItems()
-                    }
-                    _newsItems.value = freshItems
-                    Log.d(TAG, "Fresh news items loaded: ${freshItems.size} items")
-                } else {
-                    // Usar caché y filtrar localmente
-                    val cachedItems = repository.getNewsFeedCached().first()
-
-                    val filteredItems = if (categoryId != null) {
-                        cachedItems.filter { it.category_id == categoryId }
-                    } else {
-                        cachedItems
-                    }
-
-                    _newsItems.value = filteredItems
-                    Log.d(TAG, "Cached news items filtered: ${filteredItems.size} items")
-                }
-
-                updateCacheStatus()
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading news items", e)
-                e.printStackTrace()
-                _newsItems.value = emptyList()
-            } finally {
-                _isLoading.value = false
-                _isRefreshing.value = false
-            }
-        }
-
-        // Cargar datos en caché de manera paralela
-        viewModelScope.launch {
-            try {
-                val categoryId = _selectedCategory.value?.category_id
                 repository.loadNewsFeedWithFilter(
                     categoryId = categoryId,
                     forceRefresh = forceRefresh
                 )
+
+                Log.d(TAG, "✅ News feed loaded successfully")
+
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading cached news feed", e)
+                Log.e(TAG, "❌ Error loading news items", e)
+                e.printStackTrace()
+
+                if (_newsItems.value.isEmpty()) {
+                    _errorMessage.value = "No internet connection. Unable to load news."
+                    Log.w(TAG, "⚠️ No cached data available while offline")
+                } else {
+                    _errorMessage.value = "Could not refresh. Showing cached news."
+                    Log.i(TAG, "ℹ️ Using ${_newsItems.value.size} cached items while offline")
+                }
+
+            } finally {
+                _isLoading.value = false
+                _isRefreshing.value = false
+                Log.d(TAG, "🏁 Loading operation completed")
             }
         }
     }
 
-    /**
-     * Refresh news feed (for pull-to-refresh)
-     */
     fun refreshNewsFeed() {
-        Log.d(TAG, "Refreshing news feed...")
+        Log.d(TAG, "🔄 Manual refresh requested")
         loadNewsItems(forceRefresh = true)
     }
 
-    /**
-     * Update cache status for UI display
-     */
     private suspend fun updateCacheStatus() {
         try {
             val cachedCount = repository.getCachedItemsCount()
             _cacheStatus.value = if (cachedCount > 0) {
-                " Cached: $cachedCount items"
+                "📦 Cached: $cachedCount items"
             } else {
                 ""
             }
@@ -201,9 +297,6 @@ class NewsFeedViewModel(
         }
     }
 
-    /**
-     * Clear cache manually
-     */
     fun clearCache() {
         viewModelScope.launch {
             try {
@@ -216,9 +309,18 @@ class NewsFeedViewModel(
         }
     }
 
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
     /**
-     * Get category label by ID
+     * Manually dismiss connection restored banner gg
      */
+    fun dismissConnectionRestored() {
+        _connectionRestored.value = false
+        Log.d(TAG, "Connection restored banner dismissed manually")
+    }
+
     fun getCategoryLabel(categoryId: Int): String = when (categoryId) {
         1 -> "Politics"
         2 -> "Sports"
@@ -230,4 +332,21 @@ class NewsFeedViewModel(
         8 -> "Local"
         else -> "General"
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        Log.d(TAG, "🧹 NewsFeedViewModel cleared")
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+

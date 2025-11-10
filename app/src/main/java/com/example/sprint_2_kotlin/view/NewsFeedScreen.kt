@@ -1,5 +1,8 @@
 package com.example.sprint_2_kotlin.view
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -44,40 +47,13 @@ fun NewsFeedScreen(
     val cacheStatus by viewModel.cacheStatus.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
+
+    // ✅ NEW: Connection restored state
+    val connectionRestored by viewModel.connectionRestored.collectAsState()
+
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 4.dp,
-                color = Color.White
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                ) {
-                    FeedHeader(cacheStatus = cacheStatus)
-
-                    SearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it }
-                    )
-
-                    CategoryTabsFromSupabase(
-                        categories = categories,
-                        selectedCategory = selectedCategory,
-                        onCategorySelected = { category ->
-                            viewModel.selectCategory(category)
-                        },
-                        onClearFilter = {
-                            viewModel.clearCategoryFilter()
-                        }
-                    )
-                }
-            }
-        },
         bottomBar = {
             BottomNavigationBar(
                 onNavigateToGuide = onNavigateToGuide,
@@ -85,109 +61,229 @@ fun NewsFeedScreen(
             )
         }
     ) { paddingValues ->
-        SwipeRefresh(
-            state = rememberSwipeRefreshState(isRefreshing),
-            onRefresh = { viewModel.refreshNewsFeed() },
-            modifier = Modifier.padding(paddingValues)
-        ) {
-            if (isLoading && newsItems.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(modifier = Modifier.padding(paddingValues)) {
+            SwipeRefresh(
+                state = rememberSwipeRefreshState(isRefreshing),
+                onRefresh = { viewModel.refreshNewsFeed() }
+            ) {
+                if (isLoading && newsItems.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
-                        Text(
-                            "Loading news...",
-                            color = Color(0xFF666666),
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            } else if (newsItems.isEmpty() && !isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = "No news",
-                            modifier = Modifier.size(64.dp),
-                            tint = Color(0xFFAAAAAA)
-                        )
-                        Text(
-                            text = if (selectedCategory != null) {
-                                "No news in ${selectedCategory?.name} category"
-                            } else {
-                                "No news available"
-                            },
-                            fontSize = 16.sp,
-                            color = Color(0xFF666666)
-                        )
-                        Button(
-                            onClick = { viewModel.refreshNewsFeed() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF1A1A1A)
-                            )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Icon(Icons.Default.Refresh, "Refresh")
-                            Spacer(Modifier.width(8.dp))
-                            Text("Refresh")
-                        }
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF5F5F5)),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    item {
-                        MisinformationAlert()
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    if (selectedCategory != null) {
-                        item {
-                            FilterInfoCard(
-                                categoryName = selectedCategory!!.name,
-                                itemCount = newsItems.size,
-                                onClearFilter = { viewModel.clearCategoryFilter() }
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
-
-                    items(newsItems, key = { it.news_item_id }) { item ->
-                        NewsCard(
-                            item = item,
-                            categories = categories,
-                            onClick = { onNewsItemClick(item.news_item_id) }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    if (newsItems.isNotEmpty()) {
-                        item {
+                            CircularProgressIndicator()
                             Text(
-                                text = "📦 Using cached data for faster loading",
-                                fontSize = 12.sp,
-                                color = Color(0xFF999999),
+                                "Loading news...",
+                                color = Color(0xFF666666),
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                } else if (newsItems.isEmpty() && !isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = "No news",
+                                modifier = Modifier.size(64.dp),
+                                tint = Color(0xFFAAAAAA)
+                            )
+                            Text(
+                                text = if (selectedCategory != null) {
+                                    "No news in ${selectedCategory?.name} category"
+                                } else {
+                                    "No news available"
+                                },
+                                fontSize = 16.sp,
+                                color = Color(0xFF666666)
+                            )
+                            Button(
+                                onClick = { viewModel.refreshNewsFeed() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1A1A1A)
+                                )
+                            ) {
+                                Icon(Icons.Default.Refresh, "Refresh")
+                                Spacer(Modifier.width(8.dp))
+                                Text("Refresh")
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = modifier
+                            .fillMaxSize()
+                            .background(Color(0xFFF5F5F5))
+                    ) {
+                        // HEADER (DENTRO DEL SCROLL)
+                        item {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 16.dp)
-                            )
+                                    .background(Color.White)
+                            ) {
+                                FeedHeader(cacheStatus = cacheStatus)
+                                SearchBar(
+                                    query = searchQuery,
+                                    onQueryChange = { searchQuery = it }
+                                )
+                                CategoryTabsFromSupabase(
+                                    categories = categories,
+                                    selectedCategory = selectedCategory,
+                                    onCategorySelected = { category ->
+                                        viewModel.selectCategory(category)
+                                    },
+                                    onClearFilter = {
+                                        viewModel.clearCategoryFilter()
+                                    }
+                                )
+                            }
+                        }
+
+                        // MISINFORMATION ALERT
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                MisinformationAlert()
+                            }
+                        }
+
+                        // FILTER INFO
+                        if (selectedCategory != null) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    FilterInfoCard(
+                                        categoryName = selectedCategory!!.name,
+                                        itemCount = newsItems.size,
+                                        onClearFilter = { viewModel.clearCategoryFilter() }
+                                    )
+                                }
+                            }
+                        }
+
+                        // NEWS ITEMS
+                        items(newsItems, key = { it.news_item_id }) { item ->
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                NewsCard(
+                                    item = item,
+                                    categories = categories,
+                                    onClick = { onNewsItemClick(item.news_item_id) }
+                                )
+                            }
+                        }
+
+                        // CACHE INFO FOOTER
+                        if (newsItems.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "📦 Using cached data for faster loading",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF999999),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                                )
+                            }
                         }
                     }
                 }
+            }
+
+            // ============================================
+            // ✅ NEW: CONNECTION RESTORED BANNER
+            // ============================================
+            AnimatedVisibility(
+                visible = connectionRestored,
+                enter = slideInVertically(initialOffsetY = { -it }),
+                exit = slideOutVertically(targetOffsetY = { -it }),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                ConnectionRestoredBanner(
+                    onDismiss = { viewModel.dismissConnectionRestored() }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * ✅ NEW: Connection Restored Banner (Green)
+ *
+ * Shows when internet connection is restored
+ * Auto-hides after 3 seconds
+ */
+@Composable
+fun ConnectionRestoredBanner(
+    onDismiss: () -> Unit = {}
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF4CAF50),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Connection restored",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Connection restored",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Refreshing news...",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -317,7 +413,7 @@ fun FeedHeader(cacheStatus: String = "") {
         }
 
         Box {
-            IconButton(onClick = { /* TODO */ }) {
+            IconButton(onClick = { }) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
                     contentDescription = "Notifications",
@@ -400,7 +496,7 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         Spacer(Modifier.width(8.dp))
 
         IconButton(
-            onClick = { /* TODO: Filter */ },
+            onClick = { },
             modifier = Modifier
                 .size(48.dp)
                 .background(Color(0xFFF0F0F0), RoundedCornerShape(12.dp))
@@ -467,7 +563,7 @@ fun MisinformationAlert() {
             }
         }
         TextButton(
-            onClick = { /* TODO */ },
+            onClick = { },
             modifier = Modifier.padding(start = 52.dp, bottom = 8.dp)
         ) {
             Text("View details", color = Color(0xFF8B4513), fontSize = 13.sp)
@@ -688,7 +784,7 @@ fun getCategoryColorDynamic(categoryId: Int): Color {
 fun getReliabilityColor(score: Double): Color {
     return when {
         score >= 0.8 -> Color(0xFF4CAF50)
-        score >= 0.6 -> Color(0xFFFFC107)
+        score >= 0.6 -> Color(0xFFC107)
         else -> Color(0xFFE53935)
     }
 }
@@ -722,3 +818,15 @@ fun BottomNavigationBar(
         )
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
