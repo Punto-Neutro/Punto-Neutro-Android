@@ -378,107 +378,141 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         Log.d(TAG, "Expired cache items deleted")
     }
 
-    // ============================================
-    // BUSINESS QUESTION #4: RATING DISTRIBUTION
-    // ============================================
+// ============================================
+// BUSINESS QUESTION #4: RATING DISTRIBUTION (SUPABASE REAL)
+// ============================================
 
     suspend fun getRatingDistributionByCategory(): Result<RatingDistributionData> {
         return withContext(Dispatchers.IO) {
             try {
-                val mockDistributions = getMockDistributionData()
-                Log.d(TAG, "Rating distribution loaded: ${mockDistributions.distributions.size} categories")
-                Result.success(mockDistributions)
+                Log.d(TAG, "Fetching real rating distribution from Supabase...")
+
+                // 1. Obtener todas las categorías
+                val categories = getCategories()
+                if (categories.isEmpty()) {
+                    Log.w(TAG, "No categories found in database")
+                    return@withContext Result.failure(Exception("No categories found"))
+                }
+
+                // 2. Para cada categoría, calcular su distribución
+                val distributions = mutableListOf<CategoryRatingDistribution>()
+
+                for (category in categories) {
+                    val distribution = calculateCategoryDistribution(category)
+                    if (distribution != null) {
+                        distributions.add(distribution)
+                        Log.d(TAG, "Processed category: ${category.name} with ${distribution.ratingCount} ratings")
+                    }
+                }
+
+                if (distributions.isEmpty()) {
+                    Log.w(TAG, "No ratings found in database")
+                    return@withContext Result.failure(Exception("No ratings data available"))
+                }
+
+                // 3. Calcular estadísticas globales
+                val statistics = calculateGlobalStatistics(distributions)
+
+                val result = RatingDistributionData(distributions, statistics)
+                Log.d(TAG, "Rating distribution loaded successfully: ${distributions.size} categories, ${statistics.totalRatings} total ratings")
+
+                Result.success(result)
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading rating distribution", e)
+                Log.e(TAG, "Error loading rating distribution from Supabase", e)
                 Result.failure(e)
             }
         }
     }
 
-    private fun getMockDistributionData(): RatingDistributionData {
-        val distributions = listOf(
+    /**
+     * Calcula la distribución de ratings para una categoría específica
+     */
+    private suspend fun calculateCategoryDistribution(category: Category): CategoryRatingDistribution? {
+        return try {
+            // 1. Obtener todas las noticias de esta categoría
+            val newsItems = client.postgrest["news_items"].select {
+                filter {
+                    eq("category_id", category.category_id)
+                }
+            }.decodeList<NewsItem>()
+
+            if (newsItems.isEmpty()) {
+                Log.d(TAG, "No news items found for category: ${category.name}")
+                return null
+            }
+
+            // 2. Obtener todos los ratings de estas noticias
+            val newsItemIds = newsItems.map { it.news_item_id }
+            val allRatings = mutableListOf<RatingItem>()
+
+            // Supabase tiene límite en queries IN, así que hacemos por lotes si es necesario
+            newsItemIds.chunked(100).forEach { batch ->
+                val ratings = client.postgrest["rating_items"].select {
+                    filter {
+                        isIn("news_item_id", batch)
+                    }
+                }.decodeList<RatingItem>()
+                allRatings.addAll(ratings)
+            }
+
+            if (allRatings.isEmpty()) {
+                Log.d(TAG, "No ratings found for category: ${category.name}")
+                return null
+            }
+
+            // 3. Calcular estadísticas
+            val avgReliability = allRatings.map { it.assigned_reliability_score }.average()
+            val ratingCount = allRatings.size
+
+            // 4. Calcular distribución por rangos
+            val range0_20 = allRatings.count { it.assigned_reliability_score <= 0.20 }
+            val range21_40 = allRatings.count { it.assigned_reliability_score in 0.21..0.40 }
+            val range41_60 = allRatings.count { it.assigned_reliability_score in 0.41..0.60 }
+            val range61_80 = allRatings.count { it.assigned_reliability_score in 0.61..0.80 }
+            val range81_100 = allRatings.count { it.assigned_reliability_score in 0.81..1.0 }
+
             CategoryRatingDistribution(
-                category = "Technology",
-                avgVeracityRating = 4.2,
-                avgPoliticalBiasRating = 5.0,
-                ratingCount = 245,
-                veracity1Star = 8,
-                veracity2Star = 12,
-                veracity3Star = 45,
-                veracity4Star = 98,
-                veracity5Star = 82,
-                biasLeftCount = 35,
-                biasCenterCount = 180,
-                biasRightCount = 30
-            ),
-            CategoryRatingDistribution(
-                category = "Politics",
-                avgVeracityRating = 2.8,
-                avgPoliticalBiasRating = -25.0,
-                ratingCount = 312,
-                veracity1Star = 45,
-                veracity2Star = 78,
-                veracity3Star = 112,
-                veracity4Star = 52,
-                veracity5Star = 25,
-                biasLeftCount = 145,
-                biasCenterCount = 98,
-                biasRightCount = 69
-            ),
-            CategoryRatingDistribution(
-                category = "Health",
-                avgVeracityRating = 3.9,
-                avgPoliticalBiasRating = 2.0,
-                ratingCount = 189,
-                veracity1Star = 12,
-                veracity2Star = 18,
-                veracity3Star = 34,
-                veracity4Star = 78,
-                veracity5Star = 47,
-                biasLeftCount = 42,
-                biasCenterCount = 125,
-                biasRightCount = 22
-            ),
-            CategoryRatingDistribution(
-                category = "Security",
-                avgVeracityRating = 3.5,
-                avgPoliticalBiasRating = 15.0,
-                ratingCount = 156,
-                veracity1Star = 18,
-                veracity2Star = 25,
-                veracity3Star = 52,
-                veracity4Star = 42,
-                veracity5Star = 19,
-                biasLeftCount = 28,
-                biasCenterCount = 95,
-                biasRightCount = 33
-            ),
-            CategoryRatingDistribution(
-                category = "Sports",
-                avgVeracityRating = 4.5,
-                avgPoliticalBiasRating = 0.0,
-                ratingCount = 98,
-                veracity1Star = 3,
-                veracity2Star = 5,
-                veracity3Star = 12,
-                veracity4Star = 38,
-                veracity5Star = 40,
-                biasLeftCount = 18,
-                biasCenterCount = 68,
-                biasRightCount = 12
+                categoryId = category.category_id,
+                category = category.name,
+                avgReliabilityScore = avgReliability,
+                ratingCount = ratingCount,
+                range0_20 = range0_20,
+                range21_40 = range21_40,
+                range41_60 = range41_60,
+                range61_80 = range61_80,
+                range81_100 = range81_100
             )
-        )
 
-        val statistics = RatingStatistics(
-            totalRatings = distributions.sumOf { it.ratingCount },
-            avgVeracity = distributions.map { it.avgVeracityRating }.average(),
-            avgBias = distributions.map { it.avgPoliticalBiasRating }.average(),
-            mostRatedCategory = distributions.maxByOrNull { it.ratingCount }?.category ?: "N/A",
-            mostCredibleCategory = distributions.maxByOrNull { it.avgVeracityRating }?.category ?: "N/A",
-            mostBiasedCategory = distributions.maxByOrNull { kotlin.math.abs(it.avgPoliticalBiasRating) }?.category ?: "N/A"
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating distribution for category: ${category.name}", e)
+            null
+        }
+    }
 
-        return RatingDistributionData(distributions, statistics)
+    /**
+     * Calcula estadísticas globales a partir de las distribuciones por categoría
+     */
+    private fun calculateGlobalStatistics(distributions: List<CategoryRatingDistribution>): RatingStatistics {
+        val totalRatings = distributions.sumOf { it.ratingCount }
+        val avgReliability = if (distributions.isNotEmpty()) {
+            // Promedio ponderado por número de ratings
+            val weightedSum = distributions.sumOf { it.avgReliabilityScore * it.ratingCount }
+            weightedSum / totalRatings
+        } else {
+            0.0
+        }
+
+        val mostRatedCategory = distributions.maxByOrNull { it.ratingCount }?.category ?: "N/A"
+        val mostReliableCategory = distributions.maxByOrNull { it.avgReliabilityScore }?.category ?: "N/A"
+        val leastReliableCategory = distributions.minByOrNull { it.avgReliabilityScore }?.category ?: "N/A"
+
+        return RatingStatistics(
+            totalRatings = totalRatings,
+            avgReliability = avgReliability,
+            mostRatedCategory = mostRatedCategory,
+            mostReliableCategory = mostReliableCategory,
+            leastReliableCategory = leastReliableCategory
+        )
     }
     // ============================================
 // CATEGORY FILTERING FUNCTIONS
