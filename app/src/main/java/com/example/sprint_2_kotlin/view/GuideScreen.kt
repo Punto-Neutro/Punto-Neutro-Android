@@ -20,8 +20,15 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GuideScreen(
+    isDarkMode: Boolean = false,
     onBackClick: () -> Unit = {}
 ) {
+    // Colores dinámicos según el tema
+    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -31,14 +38,14 @@ fun GuideScreen(
                             imageVector = Icons.Default.Shield,
                             contentDescription = "Logo",
                             modifier = Modifier.size(24.dp),
-                            tint = Color(0xFF1A1A1A)
+                            tint = textColor
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Punto Neutro",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1A1A)
+                            color = textColor
                         )
                     }
                 },
@@ -47,7 +54,7 @@ fun GuideScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFF1A1A1A)
+                            tint = textColor
                         )
                     }
                 },
@@ -57,7 +64,7 @@ fun GuideScreen(
                             Icon(
                                 imageVector = Icons.Default.Notifications,
                                 contentDescription = "Notifications",
-                                tint = Color(0xFF1A1A1A)
+                                tint = textColor
                             )
                         }
                         Box(
@@ -69,7 +76,7 @@ fun GuideScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 )
             )
         }
@@ -77,7 +84,7 @@ fun GuideScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                .background(backgroundColor)
                 .padding(paddingValues),
             contentPadding = PaddingValues(16.dp)
         ) {
@@ -86,13 +93,13 @@ fun GuideScreen(
                     text = "Guide to Identify Fake News",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "Learn to detect misinformation and manipulated content",
                     fontSize = 14.sp,
-                    color = Color(0xFF666666),
+                    color = secondaryTextColor,
                     lineHeight = 20.sp
                 )
                 Spacer(Modifier.height(24.dp))
@@ -100,6 +107,7 @@ fun GuideScreen(
 
             item {
                 GuideTipCard(
+                    isDarkMode = isDarkMode,
                     icon = Icons.Default.RemoveRedEye,
                     title = "Examine the source",
                     level = "Basic",
@@ -110,6 +118,7 @@ fun GuideScreen(
 
             item {
                 GuideTipCard(
+                    isDarkMode = isDarkMode,
                     icon = Icons.Default.Search,
                     title = "Search multiple sources",
                     level = "Basic",
@@ -120,6 +129,7 @@ fun GuideScreen(
 
             item {
                 GuideTipCard(
+                    isDarkMode = isDarkMode,
                     icon = Icons.Default.Person,
                     title = "Verify the author",
                     level = "Intermediate",
@@ -131,6 +141,7 @@ fun GuideScreen(
 
             item {
                 GuideTipCard(
+                    isDarkMode = isDarkMode,
                     icon = Icons.Default.Warning,
                     title = "Beware of sensationalist headlines",
                     level = "Basic",
@@ -141,6 +152,7 @@ fun GuideScreen(
 
             item {
                 GuideTipCard(
+                    isDarkMode = isDarkMode,
                     icon = Icons.Default.CheckCircle,
                     title = "Check the dates",
                     level = "Basic",
@@ -151,6 +163,7 @@ fun GuideScreen(
 
             item {
                 GuideTipCard(
+                    isDarkMode = isDarkMode,
                     icon = Icons.Default.Shield,
                     title = "Use verification tools",
                     level = "Advanced",
@@ -161,17 +174,17 @@ fun GuideScreen(
             }
 
             item {
-                WarningSigns()
+                WarningSigns(isDarkMode = isDarkMode)
                 Spacer(Modifier.height(24.dp))
             }
 
             item {
-                VerificationProcess()
+                VerificationProcess(isDarkMode = isDarkMode)
                 Spacer(Modifier.height(24.dp))
             }
 
             item {
-                RecommendedTools()
+                RecommendedTools(isDarkMode = isDarkMode)
                 Spacer(Modifier.height(16.dp))
             }
         }
@@ -180,16 +193,22 @@ fun GuideScreen(
 
 @Composable
 fun GuideTipCard(
+    isDarkMode: Boolean = false,
     icon: ImageVector,
     title: String,
     level: String,
     description: String,
     levelColor: Color = Color(0xFF757575)
 ) {
+    val cardColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val iconBgColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -204,14 +223,14 @@ fun GuideTipCard(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFFF5F5F5),
+                        color = iconBgColor,
                         modifier = Modifier.size(40.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = title,
-                                tint = Color(0xFF1A1A1A),
+                                tint = textColor,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -221,7 +240,7 @@ fun GuideTipCard(
                         text = title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1A1A1A)
+                        color = textColor
                     )
                 }
 
@@ -244,7 +263,7 @@ fun GuideTipCard(
             Text(
                 text = description,
                 fontSize = 14.sp,
-                color = Color(0xFF666666),
+                color = secondaryTextColor,
                 lineHeight = 20.sp
             )
         }
@@ -252,11 +271,15 @@ fun GuideTipCard(
 }
 
 @Composable
-fun WarningSigns() {
+fun WarningSigns(isDarkMode: Boolean = false) {
+    val cardColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val itemTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF333333)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -272,23 +295,25 @@ fun WarningSigns() {
                     text = "Warning Signs",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
             }
 
             Spacer(Modifier.height(16.dp))
 
-            WarningItem("Strange URLs or many spelling errors")
+            WarningItem(isDarkMode = isDarkMode, text = "Strange URLs or many spelling errors")
             Spacer(Modifier.height(8.dp))
-            WarningItem("Images that don't match the text")
+            WarningItem(isDarkMode = isDarkMode, text = "Images that don't match the text")
             Spacer(Modifier.height(8.dp))
-            WarningItem("Missing date or clearly identified author")
+            WarningItem(isDarkMode = isDarkMode, text = "Missing date or clearly identified author")
         }
     }
 }
 
 @Composable
-fun WarningItem(text: String) {
+fun WarningItem(isDarkMode: Boolean = false, text: String) {
+    val textColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF333333)
+
     Row(verticalAlignment = Alignment.Top) {
         Box(
             modifier = Modifier
@@ -300,18 +325,21 @@ fun WarningItem(text: String) {
         Text(
             text = text,
             fontSize = 14.sp,
-            color = Color(0xFF333333),
+            color = textColor,
             lineHeight = 20.sp
         )
     }
 }
 
 @Composable
-fun VerificationProcess() {
+fun VerificationProcess(isDarkMode: Boolean = false) {
+    val cardColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -327,13 +355,14 @@ fun VerificationProcess() {
                     text = "Verification Process",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
             }
 
             Spacer(Modifier.height(16.dp))
 
             ProcessStep(
+                isDarkMode = isDarkMode,
                 number = "1",
                 title = "First reading",
                 description = "Read the title and first paragraph. Does it seem credible to you?"
@@ -341,6 +370,7 @@ fun VerificationProcess() {
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
+                isDarkMode = isDarkMode,
                 number = "2",
                 title = "Verify the source",
                 description = "Research who published the information and their reputation."
@@ -348,6 +378,7 @@ fun VerificationProcess() {
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
+                isDarkMode = isDarkMode,
                 number = "3",
                 title = "Look for corroboration",
                 description = "Search for the same news in other reliable media outlets."
@@ -355,6 +386,7 @@ fun VerificationProcess() {
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
+                isDarkMode = isDarkMode,
                 number = "4",
                 title = "Analyze the images",
                 description = "Use reverse image search to verify their origin."
@@ -362,6 +394,7 @@ fun VerificationProcess() {
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
+                isDarkMode = isDarkMode,
                 number = "5",
                 title = "Consult experts",
                 description = "Look for opinions from specialists on the topic covered."
@@ -371,11 +404,20 @@ fun VerificationProcess() {
 }
 
 @Composable
-fun ProcessStep(number: String, title: String, description: String) {
+fun ProcessStep(
+    isDarkMode: Boolean = false,
+    number: String,
+    title: String,
+    description: String
+) {
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val numberBgColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
+
     Row(modifier = Modifier.fillMaxWidth()) {
         Surface(
             shape = CircleShape,
-            color = Color(0xFF1A1A1A),
+            color = numberBgColor,
             modifier = Modifier.size(28.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -395,13 +437,13 @@ fun ProcessStep(number: String, title: String, description: String) {
                 text = title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF1A1A1A)
+                color = textColor
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = description,
                 fontSize = 13.sp,
-                color = Color(0xFF666666),
+                color = secondaryTextColor,
                 lineHeight = 18.sp
             )
         }
@@ -409,11 +451,14 @@ fun ProcessStep(number: String, title: String, description: String) {
 }
 
 @Composable
-fun RecommendedTools() {
+fun RecommendedTools(isDarkMode: Boolean = false) {
+    val cardColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -429,13 +474,14 @@ fun RecommendedTools() {
                     text = "Recommended Tools",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
             }
 
             Spacer(Modifier.height(16.dp))
 
             ToolCard(
+                isDarkMode = isDarkMode,
                 title = "Punto Neutro AI",
                 description = "Our integrated automatic verification system.",
                 icon = Icons.Default.SmartToy
@@ -444,6 +490,7 @@ fun RecommendedTools() {
             Spacer(Modifier.height(12.dp))
 
             ToolCard(
+                isDarkMode = isDarkMode,
                 title = "Reverse Search",
                 description = "Verify the origin and authenticity of images.",
                 icon = Icons.Default.ImageSearch
@@ -453,10 +500,19 @@ fun RecommendedTools() {
 }
 
 @Composable
-fun ToolCard(title: String, description: String, icon: ImageVector) {
+fun ToolCard(
+    isDarkMode: Boolean = false,
+    title: String,
+    description: String,
+    icon: ImageVector
+) {
+    val bgColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF8F8F8)
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = Color(0xFFF8F8F8),
+        color = bgColor,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -466,7 +522,7 @@ fun ToolCard(title: String, description: String, icon: ImageVector) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color(0xFF1A1A1A),
+                tint = textColor,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.width(12.dp))
@@ -475,13 +531,13 @@ fun ToolCard(title: String, description: String, icon: ImageVector) {
                     text = title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = description,
                     fontSize = 13.sp,
-                    color = Color(0xFF666666)
+                    color = secondaryTextColor
                 )
             }
         }
