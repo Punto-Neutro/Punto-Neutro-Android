@@ -65,6 +65,9 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
+    // DataStore para persistir preferencias (Dark Mode)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
     // ========================================
     // ROOM DATABASE (CACHING)
     // ========================================

@@ -35,6 +35,7 @@ import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
+    isDarkMode: Boolean = false,
     onNewsItemClick: (Int) -> Unit,
     onNavigateToGuide: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
@@ -48,14 +49,20 @@ fun NewsFeedScreen(
     val categories by viewModel.categories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
-    // ✅ NEW: Connection restored state
     val connectionRestored by viewModel.connectionRestored.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
 
+    // Colores dinámicos según el tema
+    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar(
+                isDarkMode = isDarkMode,
                 onNavigateToGuide = onNavigateToGuide,
                 onNavigateToProfile = onNavigateToProfile
             )
@@ -68,24 +75,30 @@ fun NewsFeedScreen(
             ) {
                 if (isLoading && newsItems.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(backgroundColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(
+                                color = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
+                            )
                             Text(
                                 "Loading news...",
-                                color = Color(0xFF666666),
+                                color = secondaryTextColor,
                                 fontSize = 14.sp
                             )
                         }
                     }
                 } else if (newsItems.isEmpty() && !isLoading) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(backgroundColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -96,7 +109,7 @@ fun NewsFeedScreen(
                                 Icons.Default.Info,
                                 contentDescription = "No news",
                                 modifier = Modifier.size(64.dp),
-                                tint = Color(0xFFAAAAAA)
+                                tint = secondaryTextColor
                             )
                             Text(
                                 text = if (selectedCategory != null) {
@@ -105,12 +118,12 @@ fun NewsFeedScreen(
                                     "No news available"
                                 },
                                 fontSize = 16.sp,
-                                color = Color(0xFF666666)
+                                color = secondaryTextColor
                             )
                             Button(
                                 onClick = { viewModel.refreshNewsFeed() },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF1A1A1A)
+                                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
                                 )
                             ) {
                                 Icon(Icons.Default.Refresh, "Refresh")
@@ -123,21 +136,25 @@ fun NewsFeedScreen(
                     LazyColumn(
                         modifier = modifier
                             .fillMaxSize()
-                            .background(Color(0xFFF5F5F5))
+                            .background(backgroundColor)
                     ) {
-                        // HEADER (DENTRO DEL SCROLL)
                         item {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color.White)
+                                    .background(surfaceColor)
                             ) {
-                                FeedHeader(cacheStatus = cacheStatus)
+                                FeedHeader(
+                                    isDarkMode = isDarkMode,
+                                    cacheStatus = cacheStatus
+                                )
                                 SearchBar(
+                                    isDarkMode = isDarkMode,
                                     query = searchQuery,
                                     onQueryChange = { searchQuery = it }
                                 )
                                 CategoryTabsFromSupabase(
+                                    isDarkMode = isDarkMode,
                                     categories = categories,
                                     selectedCategory = selectedCategory,
                                     onCategorySelected = { category ->
@@ -150,18 +167,16 @@ fun NewsFeedScreen(
                             }
                         }
 
-                        // MISINFORMATION ALERT
                         item {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 12.dp)
                             ) {
-                                MisinformationAlert()
+                                MisinformationAlert(isDarkMode = isDarkMode)
                             }
                         }
 
-                        // FILTER INFO
                         if (selectedCategory != null) {
                             item {
                                 Column(
@@ -170,6 +185,7 @@ fun NewsFeedScreen(
                                         .padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     FilterInfoCard(
+                                        isDarkMode = isDarkMode,
                                         categoryName = selectedCategory!!.name,
                                         itemCount = newsItems.size,
                                         onClearFilter = { viewModel.clearCategoryFilter() }
@@ -178,12 +194,12 @@ fun NewsFeedScreen(
                             }
                         }
 
-                        // NEWS ITEMS
                         items(newsItems, key = { it.news_item_id }) { item ->
                             Column(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
                                 NewsCard(
+                                    isDarkMode = isDarkMode,
                                     item = item,
                                     categories = categories,
                                     onClick = { onNewsItemClick(item.news_item_id) }
@@ -191,13 +207,12 @@ fun NewsFeedScreen(
                             }
                         }
 
-                        // CACHE INFO FOOTER
                         if (newsItems.isNotEmpty()) {
                             item {
                                 Text(
                                     text = "📦 Using cached data for faster loading",
                                     fontSize = 12.sp,
-                                    color = Color(0xFF999999),
+                                    color = if (isDarkMode) Color(0xFF808080) else Color(0xFF999999),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 16.dp, vertical = 16.dp)
@@ -208,9 +223,6 @@ fun NewsFeedScreen(
                 }
             }
 
-            // ============================================
-            // ✅ NEW: CONNECTION RESTORED BANNER
-            // ============================================
             AnimatedVisibility(
                 visible = connectionRestored,
                 enter = slideInVertically(initialOffsetY = { -it }),
@@ -225,12 +237,6 @@ fun NewsFeedScreen(
     }
 }
 
-/**
- * ✅ NEW: Connection Restored Banner (Green)
- *
- * Shows when internet connection is restored
- * Auto-hides after 3 seconds
- */
 @Composable
 fun ConnectionRestoredBanner(
     onDismiss: () -> Unit = {}
@@ -291,6 +297,7 @@ fun ConnectionRestoredBanner(
 
 @Composable
 fun CategoryTabsFromSupabase(
+    isDarkMode: Boolean = false,
     categories: List<Category>,
     selectedCategory: Category?,
     onCategorySelected: (Category) -> Unit,
@@ -304,6 +311,7 @@ fun CategoryTabsFromSupabase(
     ) {
         item {
             CategoryChip(
+                isDarkMode = isDarkMode,
                 text = "All",
                 selected = selectedCategory == null,
                 onClick = onClearFilter
@@ -312,6 +320,7 @@ fun CategoryTabsFromSupabase(
 
         items(categories) { category ->
             CategoryChip(
+                isDarkMode = isDarkMode,
                 text = category.name,
                 selected = selectedCategory?.category_id == category.category_id,
                 onClick = { onCategorySelected(category) }
@@ -322,14 +331,18 @@ fun CategoryTabsFromSupabase(
 
 @Composable
 fun FilterInfoCard(
+    isDarkMode: Boolean = false,
     categoryName: String,
     itemCount: Int,
     onClearFilter: () -> Unit
 ) {
+    val cardColor = if (isDarkMode) Color(0xFF1A3A5C) else Color(0xFFE3F2FD)
+    val textColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF1976D2)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -343,7 +356,7 @@ fun FilterInfoCard(
                 Icon(
                     imageVector = Icons.Default.FilterList,
                     contentDescription = "Filter",
-                    tint = Color(0xFF1976D2),
+                    tint = textColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -351,13 +364,13 @@ fun FilterInfoCard(
                     Text(
                         text = "Filtered by: $categoryName",
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1976D2),
+                        color = textColor,
                         fontSize = 13.sp
                     )
                     Text(
                         text = "$itemCount ${if (itemCount == 1) "article" else "articles"} found",
                         fontSize = 11.sp,
-                        color = Color(0xFF1976D2)
+                        color = textColor
                     )
                 }
             }
@@ -369,7 +382,7 @@ fun FilterInfoCard(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Clear filter",
-                    tint = Color(0xFF1976D2),
+                    tint = textColor,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -378,7 +391,15 @@ fun FilterInfoCard(
 }
 
 @Composable
-fun FeedHeader(cacheStatus: String = "") {
+fun FeedHeader(
+    isDarkMode: Boolean = false,
+    cacheStatus: String = ""
+) {
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val tertiaryTextColor = if (isDarkMode) Color(0xFF808080) else Color(0xFF999999)
+    val dividerColor = if (isDarkMode) Color(0xFF333333) else Color(0xFFE0E0E0)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -392,21 +413,21 @@ fun FeedHeader(cacheStatus: String = "") {
                     imageVector = Icons.Default.Shield,
                     contentDescription = "Logo",
                     modifier = Modifier.size(24.dp),
-                    tint = Color(0xFF1A1A1A)
+                    tint = textColor
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "Punto Neutro",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
             }
             if (cacheStatus.isNotEmpty()) {
                 Text(
                     text = cacheStatus,
                     fontSize = 11.sp,
-                    color = Color(0xFF999999),
+                    color = tertiaryTextColor,
                     modifier = Modifier.padding(start = 32.dp, top = 2.dp)
                 )
             }
@@ -417,7 +438,7 @@ fun FeedHeader(cacheStatus: String = "") {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
                     contentDescription = "Notifications",
-                    tint = Color(0xFF1A1A1A)
+                    tint = textColor
                 )
             }
             Box(
@@ -435,36 +456,55 @@ fun FeedHeader(cacheStatus: String = "") {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        StatItem(value = "1,247", label = "Verified today")
-        StatItem(value = "25", label = "Fake detected", color = Color(0xFFE53935))
-        StatItem(value = "158", label = "Verifying")
+        StatItem(isDarkMode = isDarkMode, value = "1,247", label = "Verified today")
+        StatItem(isDarkMode = isDarkMode, value = "25", label = "Fake detected", color = Color(0xFFE53935))
+        StatItem(isDarkMode = isDarkMode, value = "158", label = "Verifying")
     }
 
     Divider(
         modifier = Modifier.padding(vertical = 8.dp),
-        color = Color(0xFFE0E0E0)
+        color = dividerColor
     )
 }
 
 @Composable
-fun StatItem(value: String, label: String, color: Color = Color(0xFF1A1A1A)) {
+fun StatItem(
+    isDarkMode: Boolean = false,
+    value: String,
+    label: String,
+    color: Color? = null
+) {
+    val textColor = color ?: if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = value,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = color
+            color = textColor
         )
         Text(
             text = label,
             fontSize = 11.sp,
-            color = Color(0xFF666666)
+            color = secondaryTextColor
         )
     }
 }
 
 @Composable
-fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+fun SearchBar(
+    isDarkMode: Boolean = false,
+    query: String,
+    onQueryChange: (String) -> Unit
+) {
+    val containerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF8F8F8)
+    val borderColor = if (isDarkMode) Color(0xFF404040) else Color(0xFFDDDDDD)
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val placeholderColor = if (isDarkMode) Color(0xFF808080) else Color(0xFFAAAAAA)
+    val iconColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val filterBgColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF0F0F0)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -475,20 +515,22 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Search news...", color = Color(0xFFAAAAAA)) },
+            placeholder = { Text("Search news...", color = placeholderColor) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = Color(0xFF666666)
+                    tint = iconColor
                 )
             },
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFFDDDDDD),
-                unfocusedBorderColor = Color(0xFFDDDDDD),
-                focusedContainerColor = Color(0xFFF8F8F8),
-                unfocusedContainerColor = Color(0xFFF8F8F8)
+                focusedBorderColor = borderColor,
+                unfocusedBorderColor = borderColor,
+                focusedContainerColor = containerColor,
+                unfocusedContainerColor = containerColor,
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor
             ),
             singleLine = true
         )
@@ -499,29 +541,37 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
             onClick = { },
             modifier = Modifier
                 .size(48.dp)
-                .background(Color(0xFFF0F0F0), RoundedCornerShape(12.dp))
+                .background(filterBgColor, RoundedCornerShape(12.dp))
         ) {
             Icon(
                 imageVector = Icons.Default.FilterList,
                 contentDescription = "Filter",
-                tint = Color(0xFF1A1A1A)
+                tint = textColor
             )
         }
     }
 }
 
 @Composable
-fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
+fun CategoryChip(
+    isDarkMode: Boolean = false,
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val selectedBgColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
+    val unselectedTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = if (selected) Color(0xFF1A1A1A) else Color.Transparent,
+        color = if (selected) selectedBgColor else Color.Transparent,
         border = if (!selected) ButtonDefaults.outlinedButtonBorder else null
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = if (selected) Color.White else Color(0xFF666666),
+            color = if (selected) Color.White else unselectedTextColor,
             fontSize = 14.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
         )
@@ -529,11 +579,15 @@ fun CategoryChip(text: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun MisinformationAlert() {
+fun MisinformationAlert(isDarkMode: Boolean = false) {
+    val cardColor = if (isDarkMode) Color(0xFF3E2723) else Color(0xFFFFF3E0)
+    val textColor = if (isDarkMode) Color(0xFFFFCC80) else Color(0xFF8B4513)
+    val iconColor = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFFFF6F00)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -542,7 +596,7 @@ fun MisinformationAlert() {
             Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = "Warning",
-                tint = Color(0xFFFF6F00),
+                tint = iconColor,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.width(12.dp))
@@ -550,14 +604,14 @@ fun MisinformationAlert() {
                 Text(
                     text = "Misinformation Alert",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF8B4513),
+                    color = textColor,
                     fontSize = 14.sp
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "3 fake news stories detected about health topics. Verify sources before sharing.",
                     fontSize = 12.sp,
-                    color = Color(0xFF8B4513),
+                    color = textColor,
                     lineHeight = 16.sp
                 )
             }
@@ -566,13 +620,14 @@ fun MisinformationAlert() {
             onClick = { },
             modifier = Modifier.padding(start = 52.dp, bottom = 8.dp)
         ) {
-            Text("View details", color = Color(0xFF8B4513), fontSize = 13.sp)
+            Text("View details", color = textColor, fontSize = 13.sp)
         }
     }
 }
 
 @Composable
 fun NewsCard(
+    isDarkMode: Boolean = false,
     item: NewsItem,
     categories: List<Category>,
     onClick: () -> Unit
@@ -581,12 +636,18 @@ fun NewsCard(
     val categoryName = itemCategory?.name ?: "General"
     val categoryColor = getCategoryColorDynamic(item.category_id)
 
+    val cardColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val tertiaryTextColor = if (isDarkMode) Color(0xFF808080) else Color(0xFF888888)
+    val dividerColor = if (isDarkMode) Color(0xFF333333) else Color(0xFFE0E0E0)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -652,7 +713,7 @@ fun NewsCard(
                     text = item.title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A),
+                    color = textColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -662,7 +723,7 @@ fun NewsCard(
                 Text(
                     text = item.short_description,
                     fontSize = 14.sp,
-                    color = Color(0xFF666666),
+                    color = secondaryTextColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 20.sp
@@ -674,14 +735,14 @@ fun NewsCard(
                     Icon(
                         imageVector = if (item.is_verifiedSource) Icons.Default.Verified else Icons.Default.Person,
                         contentDescription = "Author",
-                        tint = if (item.is_verifiedSource) Color(0xFF4CAF50) else Color(0xFF999999),
+                        tint = if (item.is_verifiedSource) Color(0xFF4CAF50) else tertiaryTextColor,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = "Verified author",
                         fontSize = 13.sp,
-                        color = Color(0xFF666666)
+                        color = secondaryTextColor
                     )
                 }
 
@@ -691,19 +752,19 @@ fun NewsCard(
                     Text(
                         text = item.author_institution.ifEmpty { "Unknown Source" },
                         fontSize = 12.sp,
-                        color = Color(0xFF888888),
+                        color = tertiaryTextColor,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = " • ${item.days_since} days ago",
                         fontSize = 12.sp,
-                        color = Color(0xFF888888)
+                        color = tertiaryTextColor
                     )
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                Divider(color = Color(0xFFE0E0E0))
+                Divider(color = dividerColor)
 
                 Spacer(Modifier.height(8.dp))
 
@@ -714,14 +775,17 @@ fun NewsCard(
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         IconWithText(
+                            isDarkMode = isDarkMode,
                             icon = Icons.Outlined.ChatBubbleOutline,
                             text = "${item.total_ratings}"
                         )
                         IconWithText(
+                            isDarkMode = isDarkMode,
                             icon = Icons.Outlined.Share,
                             text = ""
                         )
                         IconWithText(
+                            isDarkMode = isDarkMode,
                             icon = Icons.Outlined.BookmarkBorder,
                             text = ""
                         )
@@ -730,7 +794,7 @@ fun NewsCard(
                     Button(
                         onClick = onClick,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1A1A1A)
+                            containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
                         ),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
@@ -748,12 +812,18 @@ fun NewsCard(
 }
 
 @Composable
-fun IconWithText(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+fun IconWithText(
+    isDarkMode: Boolean = false,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String
+) {
+    val iconColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFF666666),
+            tint = iconColor,
             modifier = Modifier.size(20.dp)
         )
         if (text.isNotEmpty()) {
@@ -761,7 +831,7 @@ fun IconWithText(icon: androidx.compose.ui.graphics.vector.ImageVector, text: St
             Text(
                 text = text,
                 fontSize = 13.sp,
-                color = Color(0xFF666666)
+                color = iconColor
             )
         }
     }
@@ -791,11 +861,14 @@ fun getReliabilityColor(score: Double): Color {
 
 @Composable
 fun BottomNavigationBar(
+    isDarkMode: Boolean = false,
     onNavigateToGuide: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {}
 ) {
+    val containerColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+
     NavigationBar(
-        containerColor = Color.White,
+        containerColor = containerColor,
         tonalElevation = 8.dp
     ) {
         NavigationBarItem(
@@ -818,15 +891,3 @@ fun BottomNavigationBar(
         )
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

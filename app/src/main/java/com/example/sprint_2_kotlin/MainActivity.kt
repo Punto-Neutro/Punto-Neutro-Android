@@ -32,6 +32,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.example.sprint_2_kotlin.view.ConnectivityBanner
 import com.example.sprint_2_kotlin.viewmodel.HomeViewModel
+import com.example.sprint_2_kotlin.model.data.ThemePreferences
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
@@ -42,7 +44,11 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            Sprint2KotlinTheme {
+            // ✅ DARK MODE STATE - Lee la preferencia guardada
+            val isDarkMode by ThemePreferences.isDarkMode(this).collectAsState(initial = false)
+            val coroutineScope = rememberCoroutineScope()
+
+            Sprint2KotlinTheme(darkTheme = isDarkMode) {
                 val navController = rememberNavController()
                 val isConnected by connectivityViewModel.isConnected.collectAsState()
 
@@ -105,6 +111,7 @@ class MainActivity : FragmentActivity() {
                                 route = Screen.NewsFeed.route
                             ) {
                                 NewsFeedScreen(
+                                    isDarkMode = isDarkMode,
                                     onNewsItemClick = { newsItemId ->
                                         navController.navigate(
                                             Screen.NewsItemDetail.createRoute(newsItemId)
@@ -127,6 +134,7 @@ class MainActivity : FragmentActivity() {
                                 val userProfileId = backStackEntry.arguments?.getInt("userProfileId") ?: 0
 
                                 NewsItemDetailScreen(
+                                    isDarkMode = isDarkMode,
                                     newsItemId = newsItemId,
                                     userProfileId = userProfileId,
                                     onBackClick = {
@@ -138,12 +146,19 @@ class MainActivity : FragmentActivity() {
 
                             composable(route = Screen.Guide.route) {
                                 GuideScreen(
+                                    isDarkMode = isDarkMode,
                                     onBackClick = { navController.popBackStack() }
                                 )
                             }
 
                             composable(route = Screen.Profile.route) {
                                 ProfileScreen(
+                                    isDarkMode = isDarkMode,
+                                    onToggleDarkMode = { newValue ->
+                                        coroutineScope.launch {
+                                            ThemePreferences.setDarkMode(this@MainActivity, newValue)
+                                        }
+                                    },
                                     onLogout = {
                                         navController.navigate(Screen.Auth.route) {
                                             popUpTo(0) { inclusive = true }

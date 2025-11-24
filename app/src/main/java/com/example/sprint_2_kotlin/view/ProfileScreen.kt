@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
+    isDarkMode: Boolean = false,
+    onToggleDarkMode: (Boolean) -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
     onNavigateToGuide: () -> Unit = {}
@@ -35,6 +37,16 @@ fun ProfileScreen(
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showAdminPanel by remember { mutableStateOf(false) }
     var tapCount by remember { mutableStateOf(0) }
+
+    // Edit Profile dialog state
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    // Colores dinámicos según el tema
+    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val tertiaryTextColor = if (isDarkMode) Color(0xFF808080) else Color(0xFF888888)
 
     Scaffold(
         topBar = {
@@ -60,14 +72,14 @@ fun ProfileScreen(
                             imageVector = Icons.Default.Shield,
                             contentDescription = "Logo",
                             modifier = Modifier.size(24.dp),
-                            tint = Color(0xFF1A1A1A)
+                            tint = textColor
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Punto Neutro",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A1A1A)
+                            color = textColor
                         )
                     }
                 },
@@ -77,7 +89,7 @@ fun ProfileScreen(
                             Icon(
                                 imageVector = Icons.Default.Notifications,
                                 contentDescription = "Notifications",
-                                tint = Color(0xFF1A1A1A)
+                                tint = textColor
                             )
                         }
                         Box(
@@ -97,12 +109,13 @@ fun ProfileScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 )
             )
         },
         bottomBar = {
             ProfileBottomNavigationBar(
+                isDarkMode = isDarkMode,
                 onNavigateToHome = onNavigateToHome,
                 onNavigateToGuide = onNavigateToGuide
             )
@@ -111,26 +124,28 @@ fun ProfileScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                .background(backgroundColor)
                 .padding(paddingValues),
             contentPadding = PaddingValues(16.dp)
         ) {
             item {
                 UserProfileCard(
-                    onAdminClick = { showPasswordDialog = true }
+                    isDarkMode = isDarkMode,
+                    onAdminClick = { showPasswordDialog = true },
+                    onEditProfileClick = { showEditProfileDialog = true }
                 )
                 Spacer(Modifier.height(16.dp))
             }
 
             item {
-                StatisticsGrid()
+                StatisticsGrid(isDarkMode = isDarkMode)
                 Spacer(Modifier.height(16.dp))
             }
 
             item {
                 ScrollableTabRow(
                     selectedTabIndex = selectedTab,
-                    containerColor = Color.White,
+                    containerColor = surfaceColor,
                     edgePadding = 0.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -142,7 +157,8 @@ fun ProfileScreen(
                                 Text(
                                     text = title,
                                     fontSize = 14.sp,
-                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                                    fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (selectedTab == index) textColor else secondaryTextColor
                                 )
                             }
                         )
@@ -156,16 +172,25 @@ fun ProfileScreen(
                     text = "Recent Activity",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
                 Spacer(Modifier.height(12.dp))
             }
 
             items(getRecentActivities()) { activity ->
-                ActivityItem(activity)
+                ActivityItem(activity = activity, isDarkMode = isDarkMode)
                 Spacer(Modifier.height(8.dp))
             }
         }
+    }
+
+    // Edit Profile Dialog
+    if (showEditProfileDialog) {
+        EditProfileDialog(
+            isDarkMode = isDarkMode,
+            onToggleDarkMode = onToggleDarkMode,
+            onDismiss = { showEditProfileDialog = false }
+        )
     }
 
     // Admin Password Dialog
@@ -191,14 +216,123 @@ fun ProfileScreen(
     }
 }
 
+// ============================================
+// EDIT PROFILE DIALOG (con Dark Mode toggle)
+// ============================================
+@Composable
+fun EditProfileDialog(
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = surfaceColor,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = textColor,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Settings",
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+        },
+        text = {
+            Column {
+                // Dark Mode Toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = "Theme",
+                            tint = if (isDarkMode) Color(0xFFFFD54F) else Color(0xFFFFA726),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Dark Mode",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = textColor
+                            )
+                            Text(
+                                text = if (isDarkMode) "Enabled" else "Disabled",
+                                fontSize = 12.sp,
+                                color = secondaryTextColor
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = onToggleDarkMode,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF9C27B0),
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color(0xFFB0B0B0)
+                        )
+                    )
+                }
+
+                Divider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = if (isDarkMode) Color(0xFF333333) else Color(0xFFE0E0E0)
+                )
+
+                // Placeholder para futuras opciones
+                Text(
+                    text = "More settings coming soon...",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
+                )
+            ) {
+                Text("Done", color = Color.White)
+            }
+        }
+    )
+}
+
 @Composable
 fun UserProfileCard(
-    onAdminClick: () -> Unit = {}
+    isDarkMode: Boolean = false,
+    onAdminClick: () -> Unit = {},
+    onEditProfileClick: () -> Unit = {}
 ) {
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val avatarBgColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -209,7 +343,7 @@ fun UserProfileCard(
         ) {
             Surface(
                 shape = CircleShape,
-                color = Color(0xFFF5F5F5),
+                color = avatarBgColor,
                 modifier = Modifier.size(80.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -217,7 +351,7 @@ fun UserProfileCard(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Avatar",
                         modifier = Modifier.size(40.dp),
-                        tint = Color(0xFF666666)
+                        tint = secondaryTextColor
                     )
                 }
             }
@@ -228,7 +362,7 @@ fun UserProfileCard(
                 text = "Anonymous User",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A1A)
+                color = textColor
             )
 
             Spacer(Modifier.height(4.dp))
@@ -236,7 +370,7 @@ fun UserProfileCard(
             Text(
                 text = "Active session",
                 fontSize = 13.sp,
-                color = Color(0xFF666666)
+                color = secondaryTextColor
             )
 
             Spacer(Modifier.height(12.dp))
@@ -259,9 +393,12 @@ fun UserProfileCard(
             Spacer(Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = { /* TODO: Edit profile */ },
+                onClick = onEditProfileClick,
                 modifier = Modifier.fillMaxWidth(0.7f),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = textColor
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -274,7 +411,6 @@ fun UserProfileCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // 🧪 BOTÓN DE TESTING - FUNCIONAL AHORA
             Button(
                 onClick = onAdminClick,
                 modifier = Modifier.fillMaxWidth(0.7f),
@@ -328,7 +464,7 @@ fun Badge(
 }
 
 @Composable
-fun StatisticsGrid() {
+fun StatisticsGrid(isDarkMode: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -339,6 +475,7 @@ fun StatisticsGrid() {
                 value = "342",
                 label = "Articles read",
                 iconColor = Color(0xFF2196F3),
+                isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
@@ -346,6 +483,7 @@ fun StatisticsGrid() {
                 value = "12",
                 label = "Reports submitted",
                 iconColor = Color(0xFFE53935),
+                isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -358,6 +496,7 @@ fun StatisticsGrid() {
                 value = "95%",
                 label = "Report accuracy",
                 iconColor = Color(0xFF4CAF50),
+                isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
@@ -365,6 +504,7 @@ fun StatisticsGrid() {
                 value = "28",
                 label = "Day streak",
                 iconColor = Color(0xFF9C27B0),
+                isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -377,12 +517,17 @@ fun StatCard(
     value: String,
     label: String,
     iconColor: Color,
+    isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -402,13 +547,13 @@ fun StatCard(
                 text = value,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A1A)
+                color = textColor
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = label,
                 fontSize = 12.sp,
-                color = Color(0xFF666666)
+                color = secondaryTextColor
             )
         }
     }
@@ -445,11 +590,15 @@ fun getRecentActivities(): List<ActivityData> {
 }
 
 @Composable
-fun ActivityItem(activity: ActivityData) {
+fun ActivityItem(activity: ActivityData, isDarkMode: Boolean = false) {
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val tertiaryTextColor = if (isDarkMode) Color(0xFF808080) else Color(0xFF888888)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -480,13 +629,13 @@ fun ActivityItem(activity: ActivityData) {
                     text = activity.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF1A1A1A)
+                    color = textColor
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = activity.time,
                     fontSize = 12.sp,
-                    color = Color(0xFF888888)
+                    color = tertiaryTextColor
                 )
             }
         }
@@ -495,11 +644,14 @@ fun ActivityItem(activity: ActivityData) {
 
 @Composable
 fun ProfileBottomNavigationBar(
+    isDarkMode: Boolean = false,
     onNavigateToHome: () -> Unit = {},
     onNavigateToGuide: () -> Unit = {}
 ) {
+    val containerColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+
     NavigationBar(
-        containerColor = Color.White,
+        containerColor = containerColor,
         tonalElevation = 8.dp
     ) {
         NavigationBarItem(
@@ -522,14 +674,10 @@ fun ProfileBottomNavigationBar(
         )
     }
 }
+
 // ============================================
 // ADMIN PASSWORD DIALOG
 // ============================================
-
-/**
- * Password Dialog for Admin Access
- * Required for accessing Admin Analytics Panel
- */
 @Composable
 fun AdminPasswordDialog(
     onDismiss: () -> Unit,
@@ -603,14 +751,3 @@ fun AdminPasswordDialog(
         }
     )
 }
-
-
-
-
-
-
-
-
-
-
-
