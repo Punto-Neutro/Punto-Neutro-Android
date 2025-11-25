@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.sprint_2_kotlin.viewmodel.ReadHistoryViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -28,10 +31,12 @@ fun ProfileScreen(
     onToggleDarkMode: (Boolean) -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
-    onNavigateToGuide: () -> Unit = {}
+    onNavigateToGuide: () -> Unit = {},
+    onNavigateToReadHistory: () -> Unit = {},  // ✅ AGREGADO: Navegación al historial
+    readHistoryViewModel: ReadHistoryViewModel = viewModel()  // ✅ AGREGADO: ViewModel
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Activity", "Achievements", "Settings", "Bookmarks")
+    val tabs = listOf("Activity", "Achievements", "Bookmarks")  // ✅ MODIFICADO: Quitado "Settings"
 
     // Admin panel states
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -40,6 +45,9 @@ fun ProfileScreen(
 
     // Edit Profile dialog state
     var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    // ✅ AGREGADO: Obtener contador de artículos leídos
+    val readCount by readHistoryViewModel.readCount.collectAsState()
 
     // Colores dinámicos según el tema
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
@@ -138,7 +146,11 @@ fun ProfileScreen(
             }
 
             item {
-                StatisticsGrid(isDarkMode = isDarkMode)
+                StatisticsGrid(
+                    isDarkMode = isDarkMode,
+                    readCount = readCount,  // ✅ AGREGADO: Pasar contador real
+                    onReadHistoryClick = onNavigateToReadHistory  // ✅ AGREGADO: Callback para navegación
+                )
                 Spacer(Modifier.height(16.dp))
             }
 
@@ -464,7 +476,11 @@ fun Badge(
 }
 
 @Composable
-fun StatisticsGrid(isDarkMode: Boolean = false) {
+fun StatisticsGrid(
+    isDarkMode: Boolean = false,
+    readCount: Int = 0,  // ✅ AGREGADO: Parámetro para contador real
+    onReadHistoryClick: () -> Unit = {}  // ✅ AGREGADO: Callback para navegación
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -472,11 +488,12 @@ fun StatisticsGrid(isDarkMode: Boolean = false) {
         ) {
             StatCard(
                 icon = Icons.Default.Visibility,
-                value = "342",
+                value = "$readCount",  // ✅ MODIFICADO: Usar contador real
                 label = "Articles read",
                 iconColor = Color(0xFF2196F3),
                 isDarkMode = isDarkMode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onReadHistoryClick  // ✅ AGREGADO: Hacer clickeable
             )
             StatCard(
                 icon = Icons.Default.Flag,
@@ -511,6 +528,7 @@ fun StatisticsGrid(isDarkMode: Boolean = false) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatCard(
     icon: ImageVector,
@@ -518,7 +536,8 @@ fun StatCard(
     label: String,
     iconColor: Color,
     isDarkMode: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null  // ✅ AGREGADO: Parámetro opcional para click
 ) {
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
@@ -528,7 +547,8 @@ fun StatCard(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = { onClick?.invoke() }  // ✅ AGREGADO: Hacer clickeable si hay onClick
     ) {
         Column(
             modifier = Modifier
