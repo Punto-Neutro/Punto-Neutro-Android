@@ -45,7 +45,14 @@ fun NewsItemDetailScreen(
         viewModel.startNetworkObserver(networkMonitor, newsItemId)
     }
 
+    // update : Register read history when news item is loaded
     val currentItem by viewModel.newsItem.collectAsState()
+    LaunchedEffect(currentItem) {
+        currentItem?.let { newsItem ->
+            viewModel.registerReadHistory(newsItem)
+        }
+    }
+
     val ratings by viewModel.ratings.collectAsState()
 
     // Colores dinámicos según el tema

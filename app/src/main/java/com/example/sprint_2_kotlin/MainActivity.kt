@@ -26,6 +26,7 @@ import com.example.sprint_2_kotlin.view.GuideScreen
 import com.example.sprint_2_kotlin.view.NewsFeedScreen
 import com.example.sprint_2_kotlin.view.NewsItemDetailScreen
 import com.example.sprint_2_kotlin.view.ProfileScreen
+import com.example.sprint_2_kotlin.view.ReadHistoryScreen  // ✅ AGREGADO
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.runtime.collectAsState
@@ -44,7 +45,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            // ✅ DARK MODE STATE - Lee la preferencia guardada
+            // DARK MODE STATE - Lee la preferencia guardada
             val isDarkMode by ThemePreferences.isDarkMode(this).collectAsState(initial = false)
             val coroutineScope = rememberCoroutineScope()
 
@@ -56,7 +57,7 @@ class MainActivity : FragmentActivity() {
 
                     Column(modifier = Modifier.fillMaxSize()) {
 
-                        // ✅ CONNECTIVITY BANNER
+                        //  CONNECTIVITY BANNER
                         ConnectivityBanner(isConnected = isConnected)
 
                         NavHost(
@@ -171,6 +172,24 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onNavigateToGuide = {
                                         navController.navigate(Screen.Guide.route)
+                                    },
+                                    onNavigateToReadHistory = {  //  update!!
+                                        navController.navigate(Screen.ReadHistory.route)
+                                    }
+                                )
+                            }
+
+                            // update!! : Ruta para Read History Screen
+                            composable(route = Screen.ReadHistory.route) {
+                                ReadHistoryScreen(
+                                    isDarkMode = isDarkMode,
+                                    onBackClick = {
+                                        navController.popBackStack()
+                                    },
+                                    onNewsItemClick = { newsItemId ->
+                                        navController.navigate(
+                                            Screen.NewsItemDetail.createRoute(newsItemId)
+                                        )
                                     }
                                 )
                             }

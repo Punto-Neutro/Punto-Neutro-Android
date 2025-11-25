@@ -9,6 +9,7 @@ import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.data.RatingItem
 import com.example.sprint_2_kotlin.model.data.UserProfile
+import com.example.sprint_2_kotlin.model.data.toReadHistoryEntity
 import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.Dispatchers
@@ -27,14 +28,15 @@ import utils.NetworkMonitor
  * CHANGE: Now extends AndroidViewModel to pass context to Repository
  */
 class NewsItemDetailViewModel(
-    application: Application // CAMBIO: ahora recibe Application
-) : AndroidViewModel(application) { //  CAMBIO: extiende AndroidViewModel
+    application: Application // update: ahora recibe Application
+) : AndroidViewModel(application) { //  update: extiende AndroidViewModel
 
     private val _isConnected = MutableStateFlow(true)
     val isConnected: StateFlow<Boolean> get() = _isConnected
-    // CAMBIO: Repository ahora recibe context
+    // update: Repository ahora recibe context
     private val dao = AppDatabase.getDatabase(application).CommentDao()
-    // CAMBIO: Repository ahora recibe context
+    private val readHistoryDao = AppDatabase.getDatabase(application).readHistoryDao()  // updated
+    // update: Repository ahora recibe context
     private val repository = Repository(application.applicationContext, dao)
     private val _newsItem = MutableStateFlow<NewsItem?>(null)
     val newsItem: StateFlow<NewsItem?> = _newsItem.asStateFlow()
@@ -80,24 +82,48 @@ class NewsItemDetailViewModel(
         }
     }
 
+    /**
+     *  NUEVA FUNCION: Register read history
+     * Only registers if the news item hasn't been read before
+     */
+    fun registerReadHistory(newsItem: NewsItem) {
+        viewModelScope.launch {
+            try {
+                // Check if already read
+                val alreadyRead = readHistoryDao.isNewsItemRead(newsItem.news_item_id)
+
+                if (!alreadyRead) {
+                    // Convert NewsItem to ReadHistoryEntity and insert
+                    val historyEntity = newsItem.toReadHistoryEntity()
+                    readHistoryDao.insertReadHistory(historyEntity)
+                    Log.d(TAG, "Read history registered for news item: ${newsItem.news_item_id}")
+                } else {
+                    Log.d(TAG, "News item already in read history: ${newsItem.news_item_id}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error registering read history: ${e.message}")
+            }
+        }
+    }
+
     fun addComment(userProfileId: Int, comment:String, newsItemId: Int, rating: Double, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit )
     {
         viewModelScope.launch {
             try {
-             val response = repository.addNewComments(userProfileId,newsItemId, comment = comment, rating = rating, completed = false)
+                val response = repository.addNewComments(userProfileId,newsItemId, comment = comment, rating = rating, completed = false)
 
-             if (response == 0){
-                 withContext(Dispatchers.Main){
-                     onSuccess()
-                     loadNewsItemById(newsItemId)
-                 }
+                if (response == 0){
+                    withContext(Dispatchers.Main){
+                        onSuccess()
+                        loadNewsItemById(newsItemId)
+                    }
 
-             }else if (response == 2) {
-                 Log.w(TAG,"Se activo el encolamiento")
-                 withContext(Dispatchers.Main){
-                     onWait()
-                 }
-             }
+                }else if (response == 2) {
+                    Log.w(TAG,"Se activo el encolamiento")
+                    withContext(Dispatchers.Main){
+                        onWait()
+                    }
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main){
                     onError(e)
@@ -112,8 +138,8 @@ class NewsItemDetailViewModel(
             networkMonitor.isConnected.collect { connected ->
                 _isConnected.value = connected
                 if (connected) {repository.syncPendingComments()
-                repository.clearCache()
-                loadNewsItemById(newsItemid)}
+                    repository.clearCache()
+                    loadNewsItemById(newsItemid)}
 
 
 
@@ -133,14 +159,3 @@ class NewsItemDetailViewModel(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
