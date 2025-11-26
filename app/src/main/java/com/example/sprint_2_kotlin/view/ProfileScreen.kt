@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.ReadHistoryViewModel
+import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -32,11 +33,14 @@ fun ProfileScreen(
     onLogout: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
     onNavigateToGuide: () -> Unit = {},
-    onNavigateToReadHistory: () -> Unit = {},  // ✅ AGREGADO: Navegación al historial
-    readHistoryViewModel: ReadHistoryViewModel = viewModel()  // ✅ AGREGADO: ViewModel
+    onNavigateToReadHistory: () -> Unit = {},
+    onNavigateToNewsDetail: (Int) -> Unit = {},
+    onNavigateToBookmarks: () -> Unit = {},  //
+    readHistoryViewModel: ReadHistoryViewModel = viewModel(),
+    bookmarkViewModel: BookmarkViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Activity", "Achievements", "Bookmarks")  // ✅ MODIFICADO: Quitado "Settings"
+    val tabs = listOf("Activity", "Achievements")  // update: ahora Solo hay 2 tabs la que es para achivements y otra que no me aucerdo xd
 
     // Admin panel states
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -46,15 +50,15 @@ fun ProfileScreen(
     // Edit Profile dialog state
     var showEditProfileDialog by remember { mutableStateOf(false) }
 
-    // ✅ AGREGADO: Obtener contador de artículos leídos
+    // Contadores
     val readCount by readHistoryViewModel.readCount.collectAsState()
+    val bookmarkCount by bookmarkViewModel.bookmarkCount.collectAsState()
 
     // Colores dinámicos según el tema
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
-    val tertiaryTextColor = if (isDarkMode) Color(0xFF808080) else Color(0xFF888888)
 
     Scaffold(
         topBar = {
@@ -148,8 +152,10 @@ fun ProfileScreen(
             item {
                 StatisticsGrid(
                     isDarkMode = isDarkMode,
-                    readCount = readCount,  // ✅ AGREGADO: Pasar contador real
-                    onReadHistoryClick = onNavigateToReadHistory  // ✅ AGREGADO: Callback para navegación
+                    readCount = readCount,
+                    bookmarkCount = bookmarkCount,
+                    onReadHistoryClick = onNavigateToReadHistory,
+                    onBookmarksClick = onNavigateToBookmarks
                 )
                 Spacer(Modifier.height(16.dp))
             }
@@ -179,19 +185,42 @@ fun ProfileScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            item {
-                Text(
-                    text = "Recent Activity",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor
-                )
-                Spacer(Modifier.height(12.dp))
-            }
+            // ✅ MODIFICADO: Solo 2 casos (Activity y Achievements)
+            when (selectedTab) {
+                0 -> {
+                    // Activity Tab
+                    item {
+                        Text(
+                            text = "Recent Activity",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
 
-            items(getRecentActivities()) { activity ->
-                ActivityItem(activity = activity, isDarkMode = isDarkMode)
-                Spacer(Modifier.height(8.dp))
+                    items(getRecentActivities()) { activity ->
+                        ActivityItem(activity = activity, isDarkMode = isDarkMode)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+                1 -> {
+                    // Achievements Tab
+                    item {
+                        Text(
+                            text = "Achievements",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "Coming soon...",
+                            fontSize = 14.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
             }
         }
     }
@@ -478,8 +507,10 @@ fun Badge(
 @Composable
 fun StatisticsGrid(
     isDarkMode: Boolean = false,
-    readCount: Int = 0,  // ✅ AGREGADO: Parámetro para contador real
-    onReadHistoryClick: () -> Unit = {}  // ✅ AGREGADO: Callback para navegación
+    readCount: Int = 0,
+    bookmarkCount: Int = 0,
+    onReadHistoryClick: () -> Unit = {},
+    onBookmarksClick: () -> Unit = {}  //
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -488,12 +519,12 @@ fun StatisticsGrid(
         ) {
             StatCard(
                 icon = Icons.Default.Visibility,
-                value = "$readCount",  // ✅ MODIFICADO: Usar contador real
+                value = "$readCount",
                 label = "Articles read",
                 iconColor = Color(0xFF2196F3),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f),
-                onClick = onReadHistoryClick  // ✅ AGREGADO: Hacer clickeable
+                onClick = onReadHistoryClick
             )
             StatCard(
                 icon = Icons.Default.Flag,
@@ -509,12 +540,13 @@ fun StatisticsGrid(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             StatCard(
-                icon = Icons.Default.CheckCircle,
-                value = "95%",
-                label = "Report accuracy",
-                iconColor = Color(0xFF4CAF50),
+                icon = Icons.Default.Bookmark,
+                value = "$bookmarkCount",
+                label = "Bookmarks",
+                iconColor = Color(0xFFFFA726),
                 isDarkMode = isDarkMode,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onBookmarksClick  //
             )
             StatCard(
                 icon = Icons.Default.TrendingUp,
@@ -537,7 +569,7 @@ fun StatCard(
     iconColor: Color,
     isDarkMode: Boolean = false,
     modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null  // ✅ AGREGADO: Parámetro opcional para click
+    onClick: (() -> Unit)? = null
 ) {
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
@@ -548,7 +580,7 @@ fun StatCard(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = { onClick?.invoke() }  // ✅ AGREGADO: Hacer clickeable si hay onClick
+        onClick = { onClick?.invoke() }
     ) {
         Column(
             modifier = Modifier

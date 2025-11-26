@@ -13,9 +13,11 @@ import androidx.room.RoomDatabase
     entities = [
         NewsItemEntity::class,
         PendingComment::class,
-        ReadHistoryEntity::class  // update: Nueva entidad para historial de lectura
+        ReadHistoryEntity::class,        // update: Nueva entidad para historial de lectura
+        BookmarkEntity::class,           // update: Entidad de bookmarks
+        BookmarkSyncQueueEntity::class   // update: Cola de sincronización para eventual connectivity
     ],
-    version = 3,  // cambiao-> Incrementado de 2 a 3
+    version = 4,  // update: Incrementado de 3 a 4
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun newsItemDao(): NewsItemDao
     abstract fun CommentDao(): CommentDao
     abstract fun readHistoryDao(): ReadHistoryDao  // update: DAO para historial de lectura
+    abstract fun bookmarkDao(): BookmarkDao        // nuuevo: DAO para bookmarks
 
     companion object {
         // Singleton prevents multiple instances of database opening at the same time
