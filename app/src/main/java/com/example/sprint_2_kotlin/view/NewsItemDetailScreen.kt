@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.sprint_2_kotlin.viewmodel.NewsItemDetailViewModel
+import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel  // bookmark
 import utils.NetworkMonitor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +35,8 @@ fun NewsItemDetailScreen(
     userProfileId: Int,
     newsItemId: Int,
     onBackClick: () -> Unit = {},
-    viewModel: NewsItemDetailViewModel = viewModel()
+    viewModel: NewsItemDetailViewModel = viewModel(),
+    bookmarkViewModel: BookmarkViewModel = viewModel()  // bookmark
 ) {
     val context = LocalContext.current
     val networkMonitor = remember { NetworkMonitor(context) }
@@ -45,7 +49,7 @@ fun NewsItemDetailScreen(
         viewModel.startNetworkObserver(networkMonitor, newsItemId)
     }
 
-    // update : Register read history when news item is loaded
+    // Register read history when news item is loaded
     val currentItem by viewModel.newsItem.collectAsState()
     LaunchedEffect(currentItem) {
         currentItem?.let { newsItem ->
@@ -54,6 +58,15 @@ fun NewsItemDetailScreen(
     }
 
     val ratings by viewModel.ratings.collectAsState()
+
+    //  Estado del bookmark
+    var isBookmarked by remember { mutableStateOf(false) }
+
+    LaunchedEffect(newsItemId) {
+        currentItem?.let {
+            isBookmarked = bookmarkViewModel.isBookmarked(newsItemId)
+        }
+    }
 
     // Colores dinámicos según el tema
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
@@ -77,6 +90,23 @@ fun NewsItemDetailScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back to News Feed",
                             tint = textColor
+                        )
+                    }
+                },
+                actions = {
+                    // ✅ NUEVO: Botón de Bookmark
+                    IconButton(
+                        onClick = {
+                            currentItem?.let { newsItem ->
+                                bookmarkViewModel.toggleBookmark(newsItem)
+                                isBookmarked = !isBookmarked
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                            tint = if (isBookmarked) Color(0xFFFFA726) else textColor
                         )
                     }
                 },
