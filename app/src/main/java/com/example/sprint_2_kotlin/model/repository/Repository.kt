@@ -80,6 +80,12 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 this.email = email
                 this.password = password
             }
+            val uid = auth.currentUserOrNull()?.id
+            val data = UserProfile(
+                uid,email
+            )
+            client.postgrest.from("user_profiles").insert(listOf(data))
+
             true
         } catch (e: Exception) {
             e.printStackTrace()
