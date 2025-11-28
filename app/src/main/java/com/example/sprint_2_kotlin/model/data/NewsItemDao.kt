@@ -94,6 +94,20 @@ interface NewsItemDao {
      */
     @Query("SELECT * FROM news_items WHERE is_verifiedSource = 1 ORDER BY publication_date DESC")
     fun getVerifiedNewsItems(): Flow<List<NewsItemEntity>>
+
+    /**
+     * Search news items by title or short description
+     * Uses LIKE operator for partial matching (case-insensitive)
+     * @param searchQuery The text to search for
+     * @return Flow of matching news items ordered by publication date
+     */
+    @Query("""
+    SELECT * FROM news_items 
+    WHERE title LIKE '%' || :searchQuery || '%' 
+       OR short_description LIKE '%' || :searchQuery || '%'
+    ORDER BY publication_date DESC
+""")
+    fun searchNewsItems(searchQuery: String): Flow<List<NewsItemEntity>>
 }
 
 
