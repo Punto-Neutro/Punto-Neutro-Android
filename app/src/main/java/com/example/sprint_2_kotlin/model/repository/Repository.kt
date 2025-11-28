@@ -3,6 +3,7 @@ package com.example.sprint_2_kotlin.model.repository
 import android.content.ContentValues
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.layout.size
 import com.example.sprint_2_kotlin.model.data.*
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.w3c.dom.Comment
 import utils.NetworkMonitor
+
 
 /**
  * Repository with Cache-First Strategy for News Feed
@@ -49,6 +51,9 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     private val database = AppDatabase.getDatabase(context)
     private val newsItemDao = database.newsItemDao()
+
+    private val categoryDao = database.categoryDao()
+
 
     // Cache expiration time: 30 minutes in milliseconds
     private val CACHE_EXPIRATION_TIME = 30 * 60 * 1000L
@@ -250,6 +255,19 @@ class Repository(private val context: Context,private val daocomment: CommentDao
      return 1
 
     }
+
+    //========================================================
+    // Add News Function with connectivity resistance
+    //========================================================
+
+    suspend fun addNeews(url: String, title: String, description: String, author_type: String, author_institution: String){
+
+    }
+
+    suspend fun syncPendingNews(){
+
+    }
+
    //===================================================
     // Function to update average reliability score
     //===============================================
@@ -523,14 +541,36 @@ class Repository(private val context: Context,private val daocomment: CommentDao
      */
     suspend fun getCategories(): List<Category> = withContext(Dispatchers.IO) {
         try {
+            // First, try to get categories from the local cache
+            val cachedCategories = categoryDao.getAllCategories()
+            if (cachedCategories.isNotEmpty()) {
+                Log.d(TAG, "Categories loaded from cache: ${cachedCategories.size}")
+                return@withContext cachedCategories
+            }
+
+            // If cache is empty, fetch from Supabase
             Log.d(TAG, "Fetching categories from Supabase...")
             val response = client.postgrest["categories"].select()
             val categories = response.decodeList<Category>()
-            Log.d(TAG, "Categories loaded: ${categories.size}")
+
+            // Save the fetched categories into the cache
+            if (categories.isNotEmpty()) {
+                categoryDao.insertAll(categories)
+                Log.d(TAG, "Categories loaded from Supabase and cached: ${categories.size}")
+            } else {
+                Log.d(TAG, "No categories found on Supabase.")
+            }
+
             categories
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading categories", e)
-            emptyList()
+            Log.e(TAG, "Error loading categories, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                categoryDao.getAllCategories()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading categories from cache as fallback", dbError)
+                emptyList()
+            }
         }
     }
 

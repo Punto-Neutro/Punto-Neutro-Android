@@ -340,6 +340,11 @@ class NewsFeedViewModel(
 }
 
 
+fun AddNews(){
+
+}
+
+
 
 
 
