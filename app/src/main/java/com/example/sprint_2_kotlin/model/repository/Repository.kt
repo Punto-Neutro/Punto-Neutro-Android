@@ -281,14 +281,27 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
                 val datos = NewsItem(
                     userProfileIdActual,
-                    title,
-                    description,
-                    imageUrl,
-                    category_id,
-                    author_type,
-                    author_institution,
-                    0,
-                    0.0,
+                    title = title,
+                    short_description = description,
+                    long_description = description,
+                    image_url = imageUrl,
+                    original_source_url = url,
+                    category_id = category_id,
+                    author_type = author_type,
+                    author_institution = author_institution,
+                    average_reliability_score = 0.0,
+                    total_ratings = 0,
+                    days_since = 0,
+                    is_fake = false,
+                    is_verifiedData = false,
+                    is_verifiedSource = false,
+
+
+
+
+
+
+
 
 
                 )

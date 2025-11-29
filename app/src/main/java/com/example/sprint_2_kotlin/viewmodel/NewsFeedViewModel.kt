@@ -28,6 +28,9 @@ class NewsFeedViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
+    private val _isConnected = MutableStateFlow(true)
+    val isConnected: StateFlow<Boolean> get() = _isConnected
+
     private val dao = AppDatabase.getDatabase(application).CommentDao()
 
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
@@ -352,6 +355,7 @@ class NewsFeedViewModel(
             if (response == 0){
                 withContext(Dispatchers.Main){
                     onSuccess()
+                    refreshNewsFeed()
                     loadNewsItems()
                 }
 
@@ -371,6 +375,33 @@ class NewsFeedViewModel(
         }
 
     }
+
+
+    fun startSync(networkMonitor: NetworkMonitor) {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                _isConnected.value = connected
+                if (connected) {
+                    repository.syncPendingNews()
+                    repository.clearCache()
+
+
+                }
+            }
+        }
+    }
+
+    fun startNetworkObserver(networkMonitor: NetworkMonitor) {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                if (connected) {
+                    startSync(networkMonitor)
+
+                }
+            }
+        }
+    }
+
 
 
 }

@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -23,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -35,6 +38,7 @@ import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.viewmodel.NewsFeedViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import utils.NetworkMonitor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +77,13 @@ fun NewsFeedScreen(
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor(context) }
+
+    LaunchedEffect(Unit) {
+        viewModel.startNetworkObserver(networkMonitor)
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -270,6 +281,10 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
     var Author_type by remember{ mutableStateOf("") }
     var Author_institution by remember{ mutableStateOf("") }
     var Description by remember { mutableStateOf("") }
+    var showSuccessSnackbar by remember {mutableStateOf(false)}
+    var message by remember { mutableStateOf<String?>(null) }
+
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
 
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
@@ -278,6 +293,8 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
     var expanded by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
 
+
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(16.dp),
@@ -285,7 +302,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(16.dp).verticalScroll(rememberScrollState())
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -386,14 +403,24 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                                 Author_institution,
                                 Description,
                                 selectedCategory!!.category_id,
-                                onSuccess = {},
-                                onWait = {},
+                                onSuccess = {
+                                    showSuccessSnackbar = true
+                                    onDismiss()
+                                },
+                                onWait = {message = "noticia encolada posterior envio"},
                                 onError = {},
                             )
                             onDismiss()
                         },
                     ) {
                         Text("Submit")
+                    }
+                    message?.let {
+                        Text(
+                            it,
+                            color = secondaryTextColor,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
                 }
             }
