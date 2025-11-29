@@ -138,6 +138,10 @@ class MainActivity : FragmentActivity() {
                                         navController.navigate("news_feed") {
                                             popUpTo("news_feed") { inclusive = true }
                                         }
+                                    },
+                                    onShareClick = { url, title ->
+                                        // Navigate to QR share screen with URL and title
+                                        navController.navigate("qr_share/${java.net.URLEncoder.encode(url, "UTF-8")}/${java.net.URLEncoder.encode(title, "UTF-8")}")
                                     }
                                 )
                             }
@@ -207,6 +211,29 @@ class MainActivity : FragmentActivity() {
                                         navController.navigate("news_item_detail/$newsItemId")
                                     },
                                     viewModel = bookmarkViewModel
+                                )
+                            }
+
+                            composable(
+                                route = "qr_share/{url}/{title}",
+                                arguments = listOf(
+                                    navArgument("url") { type = NavType.StringType },
+                                    navArgument("title") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""
+                                val encodedTitle = backStackEntry.arguments?.getString("title") ?: ""
+
+                                val url = java.net.URLDecoder.decode(encodedUrl, "UTF-8")
+                                val title = java.net.URLDecoder.decode(encodedTitle, "UTF-8")
+
+                                QRShareScreen(
+                                    isDarkMode = isDarkMode,
+                                    newsItemUrl = url,
+                                    newsItemTitle = title,
+                                    onBackClick = {
+                                        navController.popBackStack()
+                                    }
                                 )
                             }
                         }

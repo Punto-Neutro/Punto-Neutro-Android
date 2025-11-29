@@ -27,6 +27,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.sprint_2_kotlin.viewmodel.NewsItemDetailViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel  // bookmark
 import utils.NetworkMonitor
+import androidx.compose.material.icons.filled.Share
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +36,7 @@ fun NewsItemDetailScreen(
     userProfileId: Int,
     newsItemId: Int,
     onBackClick: () -> Unit = {},
+    onShareClick: (String, String) -> Unit = { _, _ -> }, // Add this parameter
     viewModel: NewsItemDetailViewModel = viewModel(),
     bookmarkViewModel: BookmarkViewModel = viewModel()  // bookmark
 ) {
@@ -107,6 +109,21 @@ fun NewsItemDetailScreen(
                             imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                             contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
                             tint = if (isBookmarked) Color(0xFFFFA726) else textColor
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            currentItem?.let { newsItem ->
+                                val url = newsItem.original_source_url
+                                onShareClick(url, newsItem.title)
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Share",
+                            tint = textColor
                         )
                     }
                 },
