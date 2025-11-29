@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.ReadHistoryViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
+import com.example.sprint_2_kotlin.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -35,12 +36,14 @@ fun ProfileScreen(
     onNavigateToGuide: () -> Unit = {},
     onNavigateToReadHistory: () -> Unit = {},
     onNavigateToNewsDetail: (Int) -> Unit = {},
-    onNavigateToBookmarks: () -> Unit = {},  //
+    onNavigateToBookmarks: () -> Unit = {},
     readHistoryViewModel: ReadHistoryViewModel = viewModel(),
-    bookmarkViewModel: BookmarkViewModel = viewModel()
+    bookmarkViewModel: BookmarkViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel() // Add AuthViewModel
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Activity", "Achievements")  // update: ahora Solo hay 2 tabs la que es para achivements y otra que no me aucerdo xd
+    val tabs = listOf("Activity", "Achievements")
+    val coroutineScope = rememberCoroutineScope()
 
     // Admin panel states
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -49,6 +52,9 @@ fun ProfileScreen(
 
     // Edit Profile dialog state
     var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    // Logout confirmation dialog
+    var showLogoutConfirmation by remember { mutableStateOf(false) }
 
     // Contadores
     val readCount by readHistoryViewModel.readCount.collectAsState()
@@ -112,7 +118,9 @@ fun ProfileScreen(
                         )
                     }
 
-                    IconButton(onClick = onLogout) {
+                    IconButton(
+                        onClick = { showLogoutConfirmation = true }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Logout,
                             contentDescription = "Logout",
@@ -185,7 +193,6 @@ fun ProfileScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // ✅ MODIFICADO: Solo 2 casos (Activity y Achievements)
             when (selectedTab) {
                 0 -> {
                     // Activity Tab
@@ -225,6 +232,60 @@ fun ProfileScreen(
         }
     }
 
+    // Logout Confirmation Dialog
+    if (showLogoutConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmation = false },
+            containerColor = surfaceColor,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = "Logout",
+                    tint = Color(0xFFE53935),
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Confirm Logout",
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to log out? You'll need to sign in again next time.",
+                    color = secondaryTextColor
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            // Clear session using AuthViewModel
+                            authViewModel.logout()
+                            showLogoutConfirmation = false
+                            // Navigate to auth screen
+                            onLogout()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE53935)
+                    )
+                ) {
+                    Text("Logout", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showLogoutConfirmation = false }
+                ) {
+                    Text("Cancel", color = textColor)
+                }
+            }
+        )
+    }
+
     // Edit Profile Dialog
     if (showEditProfileDialog) {
         EditProfileDialog(
@@ -237,6 +298,7 @@ fun ProfileScreen(
     // Admin Password Dialog
     if (showPasswordDialog) {
         AdminPasswordDialog(
+            isDarkMode = isDarkMode,
             onDismiss = { showPasswordDialog = false },
             onPasswordCorrect = {
                 showPasswordDialog = false
@@ -248,10 +310,15 @@ fun ProfileScreen(
     // Admin Analytics Panel
     if (showAdminPanel) {
         AdminAnalyticsDialog(
+            isDarkMode = isDarkMode,
+            authViewModel = authViewModel,
             onDismiss = { showAdminPanel = false },
             onLogout = {
-                showAdminPanel = false
-                onLogout()
+                coroutineScope.launch {
+                    authViewModel.logout()
+                    showAdminPanel = false
+                    onLogout()
+                }
             }
         )
     }
@@ -510,7 +577,7 @@ fun StatisticsGrid(
     readCount: Int = 0,
     bookmarkCount: Int = 0,
     onReadHistoryClick: () -> Unit = {},
-    onBookmarksClick: () -> Unit = {}  //
+    onBookmarksClick: () -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -546,7 +613,7 @@ fun StatisticsGrid(
                 iconColor = Color(0xFFFFA726),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f),
-                onClick = onBookmarksClick  //
+                onClick = onBookmarksClick
             )
             StatCard(
                 icon = Icons.Default.TrendingUp,
@@ -732,6 +799,7 @@ fun ProfileBottomNavigationBar(
 // ============================================
 @Composable
 fun AdminPasswordDialog(
+    isDarkMode: Boolean = false,
     onDismiss: () -> Unit,
     onPasswordCorrect: () -> Unit
 ) {
@@ -739,25 +807,33 @@ fun AdminPasswordDialog(
     var showError by remember { mutableStateOf(false) }
     val correctPassword = "admin123"
 
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = surfaceColor,
         icon = {
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = "Lock",
-                tint = Color(0xFF1A1A1A),
+                tint = textColor,
                 modifier = Modifier.size(32.dp)
             )
         },
         title = {
             Text(
                 text = "Admin Access Required",
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = textColor
             )
         },
         text = {
             Column {
-                Text("Enter admin password to view analytics:")
+                Text(
+                    "Enter admin password to view analytics:",
+                    color = textColor
+                )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = password,
@@ -790,7 +866,7 @@ fun AdminPasswordDialog(
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1A1A1A)
+                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
                 )
             ) {
                 Text("Access")
@@ -798,7 +874,57 @@ fun AdminPasswordDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Cancel", color = textColor)
+            }
+        }
+    )
+}
+
+// ============================================
+// ADMIN ANALYTICS DIALOG (placeholder)
+// ============================================
+@Composable
+fun AdminAnalyticsDialog(
+    isDarkMode: Boolean = false,
+    authViewModel: AuthViewModel,
+    onDismiss: () -> Unit,
+    onLogout: () -> Unit
+) {
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = surfaceColor,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.AdminPanelSettings,
+                contentDescription = "Admin",
+                tint = Color(0xFF9C27B0),
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Admin Analytics",
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+        },
+        text = {
+            Text(
+                "Analytics dashboard coming soon...",
+                color = textColor
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
+                )
+            ) {
+                Text("Close")
             }
         }
     )
