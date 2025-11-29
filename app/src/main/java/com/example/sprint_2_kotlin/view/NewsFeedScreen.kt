@@ -32,7 +32,9 @@ import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.viewmodel.NewsFeedViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-
+import coil.request.ImageRequest
+import coil.request.CachePolicy
+import androidx.compose.ui.platform.LocalContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
@@ -207,7 +209,11 @@ fun NewsFeedScreen(
                             }
                         }
 
-                        items(newsItems, key = { it.news_item_id }) { item ->
+                        items(
+                            items = newsItems,
+                            key = { it.news_item_id },
+                            contentType = { "NewsCard" }  // MicroOpti: Define el tipo de contenido
+                        ) { item ->
                             Column(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
@@ -650,6 +656,8 @@ fun MisinformationAlert(isDarkMode: Boolean = false) {
     }
 }
 
+
+
 @Composable
 fun NewsCard(
     isDarkMode: Boolean = false,
@@ -657,6 +665,7 @@ fun NewsCard(
     categories: List<Category>,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val itemCategory = categories.find { it.category_id == item.category_id }
     val categoryName = itemCategory?.name ?: "General"
     val categoryColor = getCategoryColorDynamic(item.category_id)
@@ -682,7 +691,12 @@ fun NewsCard(
                     .height(180.dp)
             ) {
                 AsyncImage(
-                    model = item.image_url,
+                    model = ImageRequest.Builder(context)
+                        .data(item.image_url)
+                        .crossfade(true)  // Transición suave MicroOpti
+                        .memoryCachePolicy(CachePolicy.ENABLED)  // MicroOpti: Cache en RAM
+                        .diskCachePolicy(CachePolicy.ENABLED)    // MicroOpti: Cache en disco
+                        .build(),
                     contentDescription = item.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
