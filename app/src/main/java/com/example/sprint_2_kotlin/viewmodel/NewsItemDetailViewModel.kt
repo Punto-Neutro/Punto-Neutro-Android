@@ -35,9 +35,10 @@ class NewsItemDetailViewModel(
     val isConnected: StateFlow<Boolean> get() = _isConnected
     // update: Repository ahora recibe context
     private val dao = AppDatabase.getDatabase(application).CommentDao()
+    private val daonews = AppDatabase.getDatabase(application).newsItemDao()
     private val readHistoryDao = AppDatabase.getDatabase(application).readHistoryDao()  // updated
     // update: Repository ahora recibe context
-    private val repository = Repository(application.applicationContext, dao)
+    private val repository = Repository(application.applicationContext, daocomment = dao, daonewsitem = daonews)
     private val _newsItem = MutableStateFlow<NewsItem?>(null)
     val newsItem: StateFlow<NewsItem?> = _newsItem.asStateFlow()
 
@@ -138,6 +139,7 @@ class NewsItemDetailViewModel(
             networkMonitor.isConnected.collect { connected ->
                 _isConnected.value = connected
                 if (connected) {repository.syncPendingComments()
+                    repository.syncPendingNews()
                     repository.clearCache()
                     loadNewsItemById(newsItemid)}
 

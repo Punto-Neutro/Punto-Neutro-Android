@@ -22,7 +22,9 @@ import kotlinx.coroutines.launch
 class RatingDistributionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).CommentDao()
-    private val repository = Repository(application.applicationContext, dao)
+    private val daonews = AppDatabase.getDatabase(application).newsItemDao()
+    private val repository = Repository(application.applicationContext, dao, daonews)
+
 
     // Estados
     var distributionData by mutableStateOf<RatingDistributionData?>(null)

@@ -1,6 +1,7 @@
 package com.example.sprint_2_kotlin.viewmodel
 
 import android.app.Application
+import android.content.ContentValues
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.repository.Repository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import utils.NetworkMonitor
 
 /**
@@ -27,8 +30,13 @@ class NewsFeedViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
+    private val _isConnected = MutableStateFlow(true)
+    val isConnected: StateFlow<Boolean> get() = _isConnected
+
     private val dao = AppDatabase.getDatabase(application).CommentDao()
-    private val repository = Repository(application.applicationContext, dao)
+
+    private val daonews = AppDatabase.getDatabase(application).newsItemDao()
+    private val repository = Repository(application.applicationContext, dao, daonews)
 
     //  NEW: Network monitor to detect connection changes
     private val networkMonitor = NetworkMonitor(application.applicationContext)
@@ -442,7 +450,69 @@ class NewsFeedViewModel(
         super.onCleared()
         Log.d(TAG, "🧹 NewsFeedViewModel cleared")
     }
+
+    fun AddNews(title:String, Url: String, Author_type: String, Author_institution: String, Description: String, Category_id: Int, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit ) {
+        viewModelScope.launch {
+
+            try {
+            val response = repository.addNews(title = title, url = Url, author_type = Author_type, author_institution = Author_institution, description = Description, category_id = Category_id)
+
+            if (response == 0){
+                withContext(Dispatchers.Main){
+                    onSuccess()
+                    refreshNewsFeed()
+                    loadNewsItems()
+                }
+
+            }else if (response == 2) {
+                Log.w(ContentValues.TAG,"Se activo el encolamiento")
+                withContext(Dispatchers.Main){
+                    onWait()
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main){
+                onError(e)
+            }
+
+        }
+
+        }
+
+    }
+
+
+    fun startSync(networkMonitor: NetworkMonitor) {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                _isConnected.value = connected
+                if (connected) {
+                    repository.syncPendingNews()
+                    repository.clearCache()
+
+
+                }
+            }
+        }
+    }
+
+    fun startNetworkObserver(networkMonitor: NetworkMonitor) {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                if (connected) {
+                    startSync(networkMonitor)
+
+                }
+            }
+        }
+    }
+
+
+
 }
+
+
+
 
 
 

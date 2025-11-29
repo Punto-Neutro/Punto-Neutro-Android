@@ -24,8 +24,9 @@ class AuthViewModel(
 
     // IMPORTANTE CAMBIO: Repository ahora recibe context
     private val dao = AppDatabase.getDatabase(application).CommentDao()
+    private val daonews = AppDatabase.getDatabase(application).newsItemDao()
     // CAMBIO: Repository ahora recibe context
-    private val repository = Repository(application.applicationContext, dao)
+    private val repository = Repository(application.applicationContext, dao,daonews)
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 

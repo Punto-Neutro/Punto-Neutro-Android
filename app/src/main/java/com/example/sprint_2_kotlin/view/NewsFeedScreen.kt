@@ -5,26 +5,33 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.forEach
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.sprint_2_kotlin.model.data.NewsItem
@@ -32,6 +39,8 @@ import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.viewmodel.NewsFeedViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import utils.NetworkMonitor
+
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import androidx.compose.ui.platform.LocalContext
@@ -56,13 +65,41 @@ fun NewsFeedScreen(
     val noSearchResults by viewModel.noSearchResults.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        FeedbackDialog(
+            isDarkMode = isDarkMode,
+            categories = categories,
+            onDismiss = { showDialog = false }
+
+        )
+    }
+
     // Colores dinámicos según el tema
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
 
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor(context) }
+
+    LaunchedEffect(Unit) {
+        viewModel.startNetworkObserver(networkMonitor)
+    }
+
     Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showDialog = true },
+                containerColor = if (isDarkMode) Color(0xFF9C27B0) else MaterialTheme.colorScheme.primary,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Filled.Add, "Add")
+            }
+        },
+
         bottomBar = {
             BottomNavigationBar(
                 isDarkMode = isDarkMode,
@@ -255,6 +292,163 @@ fun NewsFeedScreen(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: NewsFeedViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var URL by remember { mutableStateOf("") }
+    var Author_type by remember{ mutableStateOf("") }
+    var Author_institution by remember{ mutableStateOf("") }
+    var Description by remember { mutableStateOf("") }
+    var showSuccessSnackbar by remember {mutableStateOf(false)}
+    var message by remember { mutableStateOf<String?>(null) }
+
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+
+
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<Category?>(null) }
+
+
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp).verticalScroll(rememberScrollState())
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Add an article", style = MaterialTheme.typography.titleLarge, color = textColor)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                // Dropdown menu for categories
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCategory?.name ?: "Select a Category",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = {
+                                    selectedCategory = category
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = URL,
+                    onValueChange = { URL = it },
+                    label = { Text("URL") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = Author_type,
+                    onValueChange = { Author_type = it },
+                    label = {Text("Author type")},
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = Author_institution,
+                    onValueChange = { Author_institution = it },
+                    label = {Text("Author institution")},
+                    modifier = Modifier.fillMaxWidth()
+
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = Description,
+                    onValueChange = { Description = it },
+                    label = { Text("Description")},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+
+
+                            // Handle submission logic here
+                            viewModel.AddNews(
+                                title,
+                                URL,
+                                Author_type,
+                                Author_institution,
+                                Description,
+                                selectedCategory!!.category_id,
+                                onSuccess = {
+                                    showSuccessSnackbar = true
+                                    onDismiss()
+                                },
+                                onWait = {message = "noticia encolada posterior envio"},
+                                onError = {},
+                            )
+                            onDismiss()
+                        },
+                    ) {
+                        Text("Submit")
+                    }
+                    message?.let {
+                        Text(
+                            it,
+                            color = secondaryTextColor,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 
 @Composable
 fun ConnectionRestoredBanner(
