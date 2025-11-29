@@ -117,7 +117,7 @@ private fun AdminDialogHeader(onDismiss: () -> Unit) {
 }
 
 // ============================================
-// TAB 1: Session Data (EXISTENTE)
+// TAB 1: Session Data (EXISTENTE - SIN CAMBIOS)
 // ============================================
 @Composable
 private fun SessionDataTab() {
@@ -183,7 +183,7 @@ private fun SessionCard(data: SessionData) {
 }
 
 // ============================================
-// TAB 2: Rating Distribution (NUEVO - BQ #4)
+// TAB 2: Rating Distribution (MODIFICADO - BQ #4)
 // ============================================
 @Composable
 private fun RatingDistributionTab() {
@@ -230,7 +230,7 @@ private fun RatingDistributionTab() {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Business Question #4: User-assigned ratings analysis",
+                text = "Business Question #4: User-assigned reliability ratings analysis",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
@@ -300,14 +300,9 @@ private fun GlobalStatisticsCard(
                     icon = "📊"
                 )
                 StatItem(
-                    label = "Avg Veracity",
-                    value = viewModel.formatRating(statistics.avgVeracity),
+                    label = "Avg Reliability",
+                    value = viewModel.formatPercentage(statistics.avgReliability),
                     icon = "⭐"
-                )
-                StatItem(
-                    label = "Avg Bias",
-                    value = viewModel.formatRating(statistics.avgBias),
-                    icon = "⚖️"
                 )
             }
 
@@ -323,13 +318,13 @@ private fun GlobalStatisticsCard(
             )
             InsightRow(
                 icon = "✅",
-                label = "Most Credible",
-                value = statistics.mostCredibleCategory
+                label = "Most Reliable",
+                value = statistics.mostReliableCategory
             )
             InsightRow(
-                icon = "📍",
-                label = "Most Biased",
-                value = statistics.mostBiasedCategory
+                icon = "⚠️",
+                label = "Least Reliable",
+                value = statistics.leastReliableCategory
             )
         }
     }
@@ -393,7 +388,7 @@ private fun CategoryDistributionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = viewModel.getCategoryColor(data.category).copy(alpha = 0.1f)
+            containerColor = viewModel.getCategoryColor(data.categoryId).copy(alpha = 0.1f)
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -413,10 +408,10 @@ private fun CategoryDistributionCard(
                     text = data.category,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = viewModel.getCategoryColor(data.category)
+                    color = viewModel.getCategoryColor(data.categoryId)
                 )
                 Surface(
-                    color = viewModel.getCategoryColor(data.category).copy(alpha = 0.2f),
+                    color = viewModel.getCategoryColor(data.categoryId).copy(alpha = 0.2f),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
@@ -428,21 +423,11 @@ private fun CategoryDistributionCard(
                 }
             }
 
-            // Veracity Rating
-            RatingBar(
-                label = "Veracity",
-                value = data.avgVeracityRating,
-                maxValue = 5.0,
-                color = viewModel.getCategoryColor(data.category),
-                emoji = viewModel.getCredibilityEmoji(data.avgVeracityRating),
-                viewModel = viewModel
-            )
-
-            // Political Bias Rating
-            BiasBar(
-                value = data.avgPoliticalBiasRating,
-                color = viewModel.getCategoryColor(data.category),
-                emoji = viewModel.getBiasEmoji(data.avgPoliticalBiasRating),
+            // Reliability Score Bar
+            ReliabilityBar(
+                value = data.avgReliabilityScore,
+                color = viewModel.getCategoryColor(data.categoryId),
+                emoji = viewModel.getReliabilityEmoji(data.avgReliabilityScore),
                 viewModel = viewModel
             )
 
@@ -454,7 +439,7 @@ private fun CategoryDistributionCard(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(
-                    text = if (expanded) "Hide Details" else "Show Details",
+                    text = if (expanded) "Hide Details" else "Show Distribution",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Icon(
@@ -472,10 +457,8 @@ private fun CategoryDistributionCard(
 }
 
 @Composable
-private fun RatingBar(
-    label: String,
+private fun ReliabilityBar(
     value: Double,
-    maxValue: Double,
     color: Color,
     emoji: String,
     viewModel: RatingDistributionViewModel
@@ -486,87 +469,25 @@ private fun RatingBar(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "$emoji $label",
+                text = "$emoji Reliability Score",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = "${viewModel.formatRating(value)} / ${maxValue.toInt()}",
+                text = viewModel.formatPercentage(value),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold
             )
         }
 
         LinearProgressIndicator(
-            progress = (value / maxValue).toFloat(),
+            progress = value.toFloat(),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .height(12.dp)
+                .clip(RoundedCornerShape(6.dp)),
             color = color,
             trackColor = color.copy(alpha = 0.2f)
         )
-    }
-}
-
-@Composable
-private fun BiasBar(
-    value: Double,
-    color: Color,
-    emoji: String,
-    viewModel: RatingDistributionViewModel
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "$emoji Political Bias",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = viewModel.formatRating(value),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // Bias scale: -100 (Left) to +100 (Right), 0 = Center
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color.LightGray)
-        ) {
-            val normalizedPosition = ((value + 100) / 200).coerceIn(0.0, 1.0)
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(normalizedPosition.toFloat())
-                    .background(color)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "⬅️ Left",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-            Text(
-                text = "⚖️",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "Right ➡️",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-        }
     }
 }
 
@@ -585,50 +506,47 @@ private fun DetailedDistribution(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "📊 Detailed Breakdown",
+            text = "📊 Reliability Distribution",
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold
         )
 
-        Text(
-            text = "Veracity Distribution:",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
-        )
-        DistributionRow("⭐", data.veracity1Star)
-        DistributionRow("⭐⭐", data.veracity2Star)
-        DistributionRow("⭐⭐⭐", data.veracity3Star)
-        DistributionRow("⭐⭐⭐⭐", data.veracity4Star)
-        DistributionRow("⭐⭐⭐⭐⭐", data.veracity5Star)
-
-        Divider(modifier = Modifier.padding(vertical = 4.dp))
-
-        Text(
-            text = "Political Bias Distribution:",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
-        )
-        DistributionRow("⬅️ Left", data.biasLeftCount)
-        DistributionRow("⚖️ Center", data.biasCenterCount)
-        DistributionRow("➡️ Right", data.biasRightCount)
+        DistributionRow("0% - 20%", data.range0_20, data.ratingCount)
+        DistributionRow("21% - 40%", data.range21_40, data.ratingCount)
+        DistributionRow("41% - 60%", data.range41_60, data.ratingCount)
+        DistributionRow("61% - 80%", data.range61_80, data.ratingCount)
+        DistributionRow("81% - 100%", data.range81_100, data.ratingCount)
     }
 }
 
 @Composable
-private fun DistributionRow(label: String, count: Int) {
+private fun DistributionRow(label: String, count: Int, total: Int) {
+    val percentage = if (total > 0) (count.toFloat() / total * 100).toInt() else 0
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall
         )
-        Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "($percentage%)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
     }
 }
 

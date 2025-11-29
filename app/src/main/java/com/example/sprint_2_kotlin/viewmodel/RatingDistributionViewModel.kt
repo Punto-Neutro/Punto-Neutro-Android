@@ -22,8 +22,9 @@ import kotlinx.coroutines.launch
 class RatingDistributionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao = AppDatabase.getDatabase(application).CommentDao()
-    // CAMBIO: Repository ahora recibe context
-    private val repository = Repository(application.applicationContext, dao)
+    private val daonews = AppDatabase.getDatabase(application).newsItemDao()
+    private val repository = Repository(application.applicationContext, dao, daonews)
+
 
     // Estados
     var distributionData by mutableStateOf<RatingDistributionData?>(null)
@@ -72,46 +73,39 @@ class RatingDistributionViewModel(application: Application) : AndroidViewModel(a
     }
 
     /**
-     * Obtener color para categoría (para charts)
+     * Obtener color para categoría usando category_id (mismo esquema que NewsFeedScreen)
      */
-    fun getCategoryColor(category: String): androidx.compose.ui.graphics.Color {
-        return when (category) {
-            "Technology" -> androidx.compose.ui.graphics.Color(0xFF2196F3)
-            "Politics" -> androidx.compose.ui.graphics.Color(0xFFE91E63)
-            "Health" -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
-            "Security" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
-            "Sports" -> androidx.compose.ui.graphics.Color(0xFF9C27B0)
-            else -> androidx.compose.ui.graphics.Color(0xFF607D8B)
+    fun getCategoryColor(categoryId: Int): androidx.compose.ui.graphics.Color {
+        return when (categoryId) {
+            1 -> androidx.compose.ui.graphics.Color(0xFF2196F3)  // Politics
+            2 -> androidx.compose.ui.graphics.Color(0xFFE91E63)  // Sports
+            3 -> androidx.compose.ui.graphics.Color(0xFF4CAF50)  // Science
+            4 -> androidx.compose.ui.graphics.Color(0xFFFF5722)  // Economics
+            5 -> androidx.compose.ui.graphics.Color(0xFF9C27B0)  // Business
+            6 -> androidx.compose.ui.graphics.Color(0xFF00BCD4)  // Climate
+            7 -> androidx.compose.ui.graphics.Color(0xFFFF9800)  // Conflict
+            8 -> androidx.compose.ui.graphics.Color(0xFF607D8B)  // Local
+            else -> androidx.compose.ui.graphics.Color(0xFF757575)
         }
     }
 
     /**
-     * Formatear rating para display
+     * Formatear valor de reliability (0.0 - 1.0) como porcentaje
      */
-    fun formatRating(rating: Double): String {
-        return String.format("%.1f", rating)
+    fun formatPercentage(value: Double): String {
+        val percentage = (value * 100).toInt()
+        return "$percentage%"
     }
 
     /**
-     * Obtener emoji para nivel de credibilidad
+     * Obtener emoji para nivel de reliability (escala 0.0 - 1.0)
      */
-    fun getCredibilityEmoji(avgVeracity: Double): String {
+    fun getReliabilityEmoji(avgReliability: Double): String {
         return when {
-            avgVeracity >= 4.5 -> "🌟" // Excellent
-            avgVeracity >= 3.5 -> "✅" // Good
-            avgVeracity >= 2.5 -> "⚠️" // Moderate
-            else -> "❌" // Poor
-        }
-    }
-
-    /**
-     * Obtener emoji para sesgo político
-     */
-    fun getBiasEmoji(avgBias: Double): String {
-        return when {
-            avgBias < -30 -> "⬅️" // Left
-            avgBias > 30 -> "➡️" // Right
-            else -> "⚖️" // Center
+            avgReliability >= 0.80 -> "🌟" // Excellent (80%+)
+            avgReliability >= 0.60 -> "✅" // Good (60-79%)
+            avgReliability >= 0.40 -> "⚠️" // Moderate (40-59%)
+            else -> "❌" // Poor (below 40%)
         }
     }
 }

@@ -65,6 +65,9 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
+    // DataStore para persistir preferencias (Dark Mode)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
     // ========================================
     // ROOM DATABASE (CACHING)
     // ========================================
@@ -81,10 +84,15 @@ dependencies {
 
     // Charts para Jetpack Compose izi de usar
     implementation("co.yml:ycharts:2.1.0")
+    implementation("org.jsoup:jsoup:1.17.2")
     // ========================================
     // PULL-TO-REFRESH
     // ========================================
     implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
+
+    //QR code
+    implementation("com.google.zxing:core:3.5.2")
+
 
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
@@ -103,4 +111,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
 }

@@ -43,10 +43,38 @@ fun AuthScreen(
         BiometricAuthManager(context as FragmentActivity)
     }
 
-    // Navigation check
-    if (state.isSuccess) {
-        println("DEBUG AuthScreen: isSuccess = true, calling onLoginSuccess()")
-        onLoginSuccess()
+    // Navigation check - auto navigate if session exists
+    LaunchedEffect(state.isSuccess, state.isCheckingSession) {
+        if (state.isSuccess && !state.isCheckingSession) {
+            println("DEBUG AuthScreen: isSuccess = true, calling onLoginSuccess()")
+            onLoginSuccess()
+        }
+    }
+
+    // Show loading while checking existing session
+    if (state.isCheckingSession) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CircularProgressIndicator(
+                    color = Color(0xFF1A1A1A),
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Logging in automatically...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF666666)
+                )
+            }
+        }
+        return
     }
 
     Box(
@@ -107,7 +135,7 @@ fun AuthScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                //  periodico iamgen
+                //  periodico imagen
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -241,7 +269,7 @@ fun AuthScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // Main Action Button negroo
+                // Main Action Button negro
                 Button(
                     onClick = {
                         errorMessage = ""
@@ -307,7 +335,7 @@ fun AuthScreen(
                     }
                 }
 
-                // 🔗 Forgot Password (SOLO PARA  login mode)
+                // 🔗 Forgot Password (SOLO PARA login mode)
                 if (isLoginMode) {
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { /* TODO: Implement forgot password */ }) {

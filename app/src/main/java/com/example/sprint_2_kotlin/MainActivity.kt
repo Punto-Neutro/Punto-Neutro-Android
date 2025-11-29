@@ -10,39 +10,45 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.sprint_2_kotlin.ui.theme.Sprint2KotlinTheme
-import com.example.sprint_2_kotlin.view.AuthScreen
-import com.example.sprint_2_kotlin.view.GuideScreen
-import com.example.sprint_2_kotlin.view.NewsFeedScreen
-import com.example.sprint_2_kotlin.view.NewsItemDetailScreen
-import com.example.sprint_2_kotlin.view.ProfileScreen
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.StateFlow
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import com.example.sprint_2_kotlin.view.ConnectivityBanner
+import com.example.sprint_2_kotlin.view.*
 import com.example.sprint_2_kotlin.viewmodel.HomeViewModel
+import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
+import com.example.sprint_2_kotlin.model.data.ThemePreferences
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
 
     private val connectivityViewModel: HomeViewModel by viewModels()
+
+    // BookmarkViewModel
+    private val bookmarkViewModel: BookmarkViewModel by lazy {
+        ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        )[BookmarkViewModel::class.java]
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
-            Sprint2KotlinTheme {
+            // DARK MODE STATE - Lee la preferencia guardada
+            val isDarkMode by ThemePreferences.isDarkMode(this).collectAsState(initial = false)
+            val coroutineScope = rememberCoroutineScope()
+
+            Sprint2KotlinTheme(darkTheme = isDarkMode) {
                 val navController = rememberNavController()
                 val isConnected by connectivityViewModel.isConnected.collectAsState()
 
@@ -50,12 +56,12 @@ class MainActivity : FragmentActivity() {
 
                     Column(modifier = Modifier.fillMaxSize()) {
 
-                        // ✅ CONNECTIVITY BANNER
+                        //  CONNECTIVITY BANNER
                         ConnectivityBanner(isConnected = isConnected)
 
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.Auth.route,
+                            startDestination = "auth",
                             modifier = Modifier.padding(innerPadding),
                             enterTransition = {
                                 slideIntoContainer(
@@ -83,7 +89,7 @@ class MainActivity : FragmentActivity() {
                             }
                         ) {
                             composable(
-                                route = Screen.Auth.route,
+                                route = "auth",
                                 enterTransition = {
                                     fadeIn(animationSpec = tween(600))
                                 },
@@ -94,65 +100,139 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 AuthScreen(
                                     onLoginSuccess = {
-                                        navController.navigate(Screen.NewsFeed.route) {
-                                            popUpTo(Screen.Auth.route) { inclusive = true }
+                                        navController.navigate("news_feed") {
+                                            popUpTo("auth") { inclusive = true }
                                         }
                                     }
                                 )
                             }
 
-                            composable(
-                                route = Screen.NewsFeed.route
-                            ) {
+                            composable(route = "news_feed") {
                                 NewsFeedScreen(
+                                    isDarkMode = isDarkMode,
                                     onNewsItemClick = { newsItemId ->
-                                        navController.navigate(
-                                            Screen.NewsItemDetail.createRoute(newsItemId)
-                                        )
+                                        navController.navigate("news_item_detail/$newsItemId")
                                     },
                                     onNavigateToGuide = {
-                                        navController.navigate(Screen.Guide.route)
+                                        navController.navigate("guide")
                                     },
                                     onNavigateToProfile = {
-                                        navController.navigate(Screen.Profile.route)
+                                        navController.navigate("profile")
                                     }
                                 )
                             }
 
                             composable(
-                                route = Screen.NewsItemDetail.route,
+                                route = "news_item_detail/{newsItemId}",
                                 arguments = listOf(navArgument("newsItemId") { type = NavType.IntType })
                             ) { backStackEntry ->
                                 val newsItemId = backStackEntry.arguments?.getInt("newsItemId") ?: 0
                                 val userProfileId = backStackEntry.arguments?.getInt("userProfileId") ?: 0
 
                                 NewsItemDetailScreen(
+                                    isDarkMode = isDarkMode,
                                     newsItemId = newsItemId,
                                     userProfileId = userProfileId,
-                                    onBackClick = { navController.popBackStack() }
+                                    bookmarkViewModel = bookmarkViewModel,
+                                    onBackClick = {
+                                        navController.navigate("news_feed") {
+                                            popUpTo("news_feed") { inclusive = true }
+                                        }
+                                    },
+                                    onShareClick = { url, title ->
+                                        // Navigate to QR share screen with URL and title
+                                        navController.navigate("qr_share/${java.net.URLEncoder.encode(url, "UTF-8")}/${java.net.URLEncoder.encode(title, "UTF-8")}")
+                                    }
                                 )
                             }
 
-                            composable(route = Screen.Guide.route) {
+                            composable(route = "guide") {
                                 GuideScreen(
+                                    isDarkMode = isDarkMode,
                                     onBackClick = { navController.popBackStack() }
                                 )
                             }
 
-                            composable(route = Screen.Profile.route) {
+                            composable(route = "profile") {
                                 ProfileScreen(
+                                    isDarkMode = isDarkMode,
+                                    onToggleDarkMode = { newValue ->
+                                        coroutineScope.launch {
+                                            ThemePreferences.setDarkMode(this@MainActivity, newValue)
+                                        }
+                                    },
                                     onLogout = {
-                                        navController.navigate(Screen.Auth.route) {
+                                        navController.navigate("auth") {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     },
                                     onNavigateToHome = {
-                                        navController.navigate(Screen.NewsFeed.route) {
-                                            popUpTo(Screen.NewsFeed.route) { inclusive = true }
+                                        navController.navigate("news_feed") {
+                                            popUpTo("news_feed") { inclusive = true }
                                         }
                                     },
                                     onNavigateToGuide = {
-                                        navController.navigate(Screen.Guide.route)
+                                        navController.navigate("guide")
+                                    },
+                                    onNavigateToReadHistory = {
+                                        navController.navigate("read_history")
+                                    },
+                                    onNavigateToNewsDetail = { newsItemId ->
+                                        navController.navigate("news_item_detail/$newsItemId")
+                                    },
+                                    onNavigateToBookmarks = {
+                                        navController.navigate("bookmarks")
+                                    },
+                                    bookmarkViewModel = bookmarkViewModel
+                                )
+                            }
+
+                            // Ruta para Read History Screen
+                            composable(route = "read_history") {
+                                ReadHistoryScreen(
+                                    isDarkMode = isDarkMode,
+                                    onBackClick = {
+                                        navController.popBackStack()
+                                    },
+                                    onNewsItemClick = { newsItemId ->
+                                        navController.navigate("news_item_detail/$newsItemId")
+                                    }
+                                )
+                            }
+
+                            // Ruta para Bookmarks Screen
+                            composable(route = "bookmarks") {
+                                BookmarksScreen(
+                                    isDarkMode = isDarkMode,
+                                    onBackClick = {
+                                        navController.popBackStack()
+                                    },
+                                    onNewsItemClick = { newsItemId ->
+                                        navController.navigate("news_item_detail/$newsItemId")
+                                    },
+                                    viewModel = bookmarkViewModel
+                                )
+                            }
+
+                            composable(
+                                route = "qr_share/{url}/{title}",
+                                arguments = listOf(
+                                    navArgument("url") { type = NavType.StringType },
+                                    navArgument("title") { type = NavType.StringType }
+                                )
+                            ) { backStackEntry ->
+                                val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""
+                                val encodedTitle = backStackEntry.arguments?.getString("title") ?: ""
+
+                                val url = java.net.URLDecoder.decode(encodedUrl, "UTF-8")
+                                val title = java.net.URLDecoder.decode(encodedTitle, "UTF-8")
+
+                                QRShareScreen(
+                                    isDarkMode = isDarkMode,
+                                    newsItemUrl = url,
+                                    newsItemTitle = title,
+                                    onBackClick = {
+                                        navController.popBackStack()
                                     }
                                 )
                             }

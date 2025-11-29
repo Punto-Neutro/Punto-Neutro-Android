@@ -9,6 +9,8 @@ sealed class Screen(val route: String) {
     }
     object Guide : Screen("guide")
     object Profile : Screen("profile")
+
+    object ReadHistory : Screen("read_history")  // update: Ruta para historial de lectura
 }
 
 
