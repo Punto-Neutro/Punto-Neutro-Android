@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.colorspace.connect
 import com.example.sprint_2_kotlin.model.data.*
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -17,15 +18,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import org.w3c.dom.Comment
 import utils.NetworkMonitor
+import org.jsoup.Jsoup
+import java.io.IOException
+
+
 
 
 /**
  * Repository with Cache-First Strategy for News Feed
  * Maintains all existing Supabase functionality
  */
-class Repository(private val context: Context,private val daocomment: CommentDao ) {
+class Repository(private val context: Context,private val daocomment: CommentDao, private val daonewsitem: NewsItemDao ) {
 
     // ============================================
     // SUPABASE CLIENT (EXISTING CODE - NO CHANGES)
@@ -260,13 +264,124 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     // Add News Function with connectivity resistance
     //========================================================
 
-    suspend fun addNeews(url: String, title: String, description: String, author_type: String, author_institution: String){
+    suspend fun addNews(url: String, title: String, description: String, author_type: String, author_institution: String, category_id: Int): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+                val imageUrl = extractImageUrlFromArticle(url) ?: ""
+
+                val datos = NewsItem(
+                    userProfileIdActual,
+                    title,
+                    description,
+                    imageUrl,
+                    category_id,
+                    author_type,
+                    author_institution,
+                    0,
+                    0.0,
+
+
+                )
+
+                val answer = client.from("news_items").insert(listOf(datos)) {}
+
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = title, short_description = description, image_url = "", category_id = category_id, author_type = author_type, author_institution = author_institution, average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = description, original_source_url = url, publication_date = "", added_to_appDate = ""))
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
 
     }
 
-    suspend fun syncPendingNews(){
+    suspend fun syncPendingNews():Int {
 
+        if (!networkMonitor.isConnected.value) {
+            Log.d(TAG, "Cannot sync pending news, no internet connection.")
+            return 2 // No connection
+        }
+
+        try {
+            Log.d(TAG, "Syncing pending news...")
+
+            // 1. Get the current user's profile to assign ownership
+            val user = client.auth.currentUserOrNull()?.id ?: return 2 // Not logged in
+            val profileResponse = client.from("user_profiles").select { filter { eq("user_auth_id", user) } }
+            val profile = profileResponse.decodeList<UserProfile>().firstOrNull() ?: return 2 // Profile not found
+
+            // 2. Get all pending news items from the local database
+            val pendingNews = daonewsitem.getAllPendingNews() // Assuming you create this DAO function
+            if (pendingNews.isEmpty()) {
+                Log.d(TAG, "No pending news to sync.")
+                return 1 // Nothing to sync
+            }
+
+            Log.d(TAG, "Found ${pendingNews.size} pending news items to upload.")
+
+            // 3. Iterate through each pending item and upload it
+            for (pendingItem in pendingNews) {
+                try {
+                    // Fetch the image URL online, as it wasn't available offline
+                    val imageUrl = extractImageUrlFromArticle(pendingItem.original_source_url) ?: ""
+
+                    // Create a NewsItem object for Supabase, mapping fields from NewsItemEntity
+                    val newsItemToUpload = NewsItem(
+                        title = pendingItem.title,
+                        short_description = pendingItem.long_description, // Assuming long_description holds the full text
+                        long_description = pendingItem.short_description,
+                        image_url = imageUrl,
+                        original_source_url = pendingItem.original_source_url,
+                        category_id = pendingItem.category_id,
+                        author_type = pendingItem.author_type,
+                        author_institution = pendingItem.author_institution,
+                        user_profile_id = profile.user_profile_id,
+                        total_ratings = 0, // Starts with no ratings
+                        average_reliability_score = 0.0 // Starts with no score
+                    )
+
+                    // Insert the item into the remote 'news_items' table
+                    client.from("news_items").insert(newsItemToUpload)
+
+                    // 4. If upload is successful, delete the pending item from the local DB
+                    daonewsitem.delete(pendingItem)
+                    Log.d(TAG, "Successfully synced and deleted pending news item: ${pendingItem.title}")
+
+                } catch (uploadError: Exception) {
+                    Log.e(TAG, "Failed to sync pending news item: ${pendingItem.title}", uploadError)
+                    // If a single item fails, we can choose to continue with the next one
+                    // or stop. Continuing is generally better for robustness.
+                }
+            }
+            // After syncing, clear the main news cache to ensure data is fresh on next load
+            clearCache()
+            return 1 // Sync process completed
+
+        } catch (e: Exception) {
+            Log.e(TAG, "An error occurred during the news sync process", e)
+            return 0 // General failure
+        }
     }
+
+
+
 
    //===================================================
     // Function to update average reliability score
@@ -644,4 +759,56 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         }
 }
 
+}
+
+
+suspend fun extractImageUrlFromArticle(url: String): String? {
+    return withContext(Dispatchers.IO) { // Perform network operation on the IO thread
+        try {
+            // 1. Fetch and parse the HTML document
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36") // Be a good citizen
+                .get()
+
+            // 2. Look for the 'og:image' meta tag (most reliable)
+            val ogImage = doc.select("meta[property=og:image]").attr("content")
+            if (ogImage.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via og:image: $ogImage")
+                return@withContext ogImage
+            }
+
+            // 3. Look for the 'twitter:image' meta tag
+            val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
+            if (twitterImage.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via twitter:image: $twitterImage")
+                return@withContext twitterImage
+            }
+
+            // 4. Look for the 'image_src' link tag
+            val imageSrc = doc.select("link[rel=image_src]").attr("href")
+            if (imageSrc.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via image_src: $imageSrc")
+                return@withContext imageSrc
+            }
+
+            // 5. Fallback: Find the first large image inside the <article> or <main> tag
+            val mainContent = doc.select("article, main").first()
+            val firstImage = mainContent?.select("img[src]")?.firstOrNull()?.attr("abs:src")
+            if (firstImage != null && firstImage.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via fallback (first img in article): $firstImage")
+                return@withContext firstImage
+            }
+
+            // If no image is found
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url")
+            null
+
+        } catch (e: IOException) {
+            Log.e("ImageExtractor", "Error fetching URL: $url", e)
+            null
+        } catch (e: Exception) {
+            Log.e("ImageExtractor", "An unexpected error occurred", e)
+            null
+        }
+    }
 }

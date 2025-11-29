@@ -64,6 +64,7 @@ fun NewsFeedScreen(
             isDarkMode = isDarkMode,
             categories = categories,
             onDismiss = { showDialog = false }
+
         )
     }
 
@@ -263,7 +264,7 @@ fun NewsFeedScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>, onDismiss: () -> Unit) {
+fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: NewsFeedViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var URL by remember { mutableStateOf("") }
     var Author_type by remember{ mutableStateOf("") }
@@ -375,7 +376,20 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>, onDismiss: ()
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
+
+
                             // Handle submission logic here
+                            viewModel.AddNews(
+                                title,
+                                URL,
+                                Author_type,
+                                Author_institution,
+                                Description,
+                                selectedCategory!!.category_id,
+                                onSuccess = {},
+                                onWait = {},
+                                onError = {},
+                            )
                             onDismiss()
                         },
                     ) {
