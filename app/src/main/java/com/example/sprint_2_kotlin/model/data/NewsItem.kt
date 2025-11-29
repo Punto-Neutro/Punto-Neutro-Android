@@ -1,10 +1,13 @@
 package com.example.sprint_2_kotlin.model.data
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 @Serializable
+@Entity(tableName = "news_items")
 data class NewsItem(
-    val news_item_id: Int = 0,
+
     val user_profile_id: Int = 0,
     val title: String = "",
     val short_description: String = "",
@@ -23,6 +26,7 @@ data class NewsItem(
     val original_source_url: String = "",
     val publication_date: String = "",
     val added_to_appDate: String = "",
-    val total_ratings: Int = 0
+    val total_ratings: Int = 0,
+    val news_item_id: Int = 0,
 )
 
