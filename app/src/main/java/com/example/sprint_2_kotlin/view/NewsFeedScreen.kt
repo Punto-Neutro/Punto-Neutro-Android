@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -40,6 +41,9 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import utils.NetworkMonitor
 
+import coil.request.ImageRequest
+import coil.request.CachePolicy
+import androidx.compose.ui.platform.LocalContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
@@ -58,8 +62,8 @@ fun NewsFeedScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     val connectionRestored by viewModel.connectionRestored.collectAsState()
-
-    var searchQuery by remember { mutableStateOf("") }
+    val noSearchResults by viewModel.noSearchResults.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
 
@@ -130,7 +134,8 @@ fun NewsFeedScreen(
                             )
                         }
                     }
-                } else if (newsItems.isEmpty() && !isLoading) {
+                } else if (newsItems.isEmpty() && !isLoading && searchQuery.isBlank()) {
+                    // update: Solo mostrar "No news" si NO hay búsqueda activa
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -168,7 +173,7 @@ fun NewsFeedScreen(
                             }
                         }
                     }
-                } else {
+                }else {
                     LazyColumn(
                         modifier = modifier
                             .fillMaxSize()
@@ -187,7 +192,7 @@ fun NewsFeedScreen(
                                 SearchBar(
                                     isDarkMode = isDarkMode,
                                     query = searchQuery,
-                                    onQueryChange = { searchQuery = it }
+                                    onQueryChange = { viewModel.updateSearchQuery(it) }
                                 )
                                 CategoryTabsFromSupabase(
                                     isDarkMode = isDarkMode,
@@ -199,6 +204,17 @@ fun NewsFeedScreen(
                                     onClearFilter = {
                                         viewModel.clearCategoryFilter()
                                     }
+                                )
+                            }
+                        }
+
+// Update: Banner de "No matches" cuando búsqueda no tiene resultados
+                        if (noSearchResults) {
+                            item {
+                                NoSearchResultsBanner(
+                                    isDarkMode = isDarkMode,
+                                    searchQuery = searchQuery,
+                                    onClearSearch = { viewModel.clearSearch() }
                                 )
                             }
                         }
@@ -230,7 +246,11 @@ fun NewsFeedScreen(
                             }
                         }
 
-                        items(newsItems, key = { it.news_item_id }) { item ->
+                        items(
+                            items = newsItems,
+                            key = { it.news_item_id },
+                            contentType = { "NewsCard" }  // MicroOpti: Define el tipo de contenido
+                        ) { item ->
                             Column(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
@@ -716,6 +736,18 @@ fun SearchBar(
                     tint = iconColor
                 )
             },
+            trailingIcon = {
+                // fixed : Botón para limpiar búsqueda
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear search",
+                            tint = iconColor
+                        )
+                    }
+                }
+            },
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = borderColor,
@@ -818,6 +850,8 @@ fun MisinformationAlert(isDarkMode: Boolean = false) {
     }
 }
 
+
+
 @Composable
 fun NewsCard(
     isDarkMode: Boolean = false,
@@ -825,6 +859,7 @@ fun NewsCard(
     categories: List<Category>,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val itemCategory = categories.find { it.category_id == item.category_id }
     val categoryName = itemCategory?.name ?: "General"
     val categoryColor = getCategoryColorDynamic(item.category_id)
@@ -850,7 +885,12 @@ fun NewsCard(
                     .height(180.dp)
             ) {
                 AsyncImage(
-                    model = item.image_url,
+                    model = ImageRequest.Builder(context)
+                        .data(item.image_url)
+                        .crossfade(true)  // Transición suave MicroOpti
+                        .memoryCachePolicy(CachePolicy.ENABLED)  // MicroOpti: Cache en RAM
+                        .diskCachePolicy(CachePolicy.ENABLED)    // MicroOpti: Cache en disco
+                        .build(),
                     contentDescription = item.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -1082,5 +1122,62 @@ fun BottomNavigationBar(
             selected = false,
             onClick = onNavigateToProfile
         )
+    }
+}
+
+@Composable
+fun NoSearchResultsBanner(
+    isDarkMode: Boolean = false,
+    searchQuery: String,
+    onClearSearch: () -> Unit
+) {
+    val bannerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5)
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val iconColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1976D2)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = bannerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.SearchOff,
+                contentDescription = "No results",
+                tint = iconColor,
+                modifier = Modifier.size(40.dp)
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "No matches found",
+                    fontWeight = FontWeight.Bold,
+                    color = textColor,
+                    fontSize = 16.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "No news found for \"$searchQuery\"",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor,
+                    lineHeight = 18.sp
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = onClearSearch) {
+                Text(
+                    "Clear",
+                    color = iconColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }

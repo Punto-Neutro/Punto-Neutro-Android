@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import utils.NetworkMonitor
@@ -22,7 +24,7 @@ import utils.NetworkMonitor
 /**
  * NewsFeedViewModel with Cache Support, Category Filtering, and Network Detection
  *
- * ✅ ENHANCED VERSION - Connection restored notification
+ *  ENHANCED VERSION - Connection restored notification
  */
 class NewsFeedViewModel(
     application: Application
@@ -36,7 +38,7 @@ class NewsFeedViewModel(
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
     private val repository = Repository(application.applicationContext, dao, daonews)
 
-    // ✅ NEW: Network monitor to detect connection changes
+    //  NEW: Network monitor to detect connection changes
     private val networkMonitor = NetworkMonitor(application.applicationContext)
 
     // EXISTING: News items state
@@ -52,6 +54,17 @@ class NewsFeedViewModel(
 
     private val _selectedCategory = MutableStateFlow<Category?>(null)
     val selectedCategory: StateFlow<Category?> = _selectedCategory
+
+    // ============================================
+    // Search states
+    // ============================================
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    // UPDATE :3 : Estado para detectar búsquedas sin resultados
+    private val _noSearchResults = MutableStateFlow(false)
+    val noSearchResults: StateFlow<Boolean> = _noSearchResults
 
     // ============================================
     // Cache-related states
@@ -70,7 +83,7 @@ class NewsFeedViewModel(
     val errorMessage: StateFlow<String?> = _errorMessage
 
     // ============================================
-    // ✅ NEW: Network connection states
+    //  NEW: Network connection states
     // ============================================
 
     /**
@@ -98,7 +111,7 @@ class NewsFeedViewModel(
     init {
         Log.d(TAG, "🚀 NewsFeedViewModel initialized")
 
-        // ✅ Start monitoring network changes
+        //  Start monitoring network changes
         observeNetworkChanges()
 
         // Start observing the Flow continuously FIRST
@@ -110,11 +123,11 @@ class NewsFeedViewModel(
     }
 
     // ============================================
-    // ✅ NEW: NETWORK MONITORING
+    //  NEW: NETWORK MONITORING
     // ============================================
 
     /**
-     * ✅ NEW METHOD: Observes network connectivity changes
+     *  NEW METHOD: Observes network connectivity changes
      *
      * Detects when connection is restored and triggers:
      * 1. Green banner notification
@@ -129,7 +142,7 @@ class NewsFeedViewModel(
                 Log.d(TAG, "📡 Network status changed: ${if (isConnected) "ONLINE" else "OFFLINE"}")
 
                 if (isConnected && wasOffline) {
-                    // ✅ Connection was restored!
+                    //  Connection was restored!
                     Log.d(TAG, "🌐 Connection RESTORED - triggering auto-refresh")
 
                     // Show green banner
@@ -167,25 +180,50 @@ class NewsFeedViewModel(
     /**
      * Observes cache Flow continuously
      */
+    /**
+     * Observes cache Flow continuously
+     * Now supports search queries combined with category filtering
+     */
+    /**
+     * Observes cache Flow continuously
+     * Now supports search queries combined with category filtering
+     */
     private fun observeNewsFeedFlow() {
         viewModelScope.launch {
-            Log.d(TAG, "📡 Starting continuous Flow observation...")
+            Log.d(TAG, "📡 Starting continuous Flow observation with search support...")
 
-            repository.getNewsFeedCached()
-                .catch { exception ->
-                    Log.e(TAG, "❌ Error in Flow observation", exception)
+            // Combinar searchQuery y selectedCategory para reaccionar a cambios en ambos
+            combine(
+                _searchQuery,
+                _selectedCategory
+            ) { query, category ->
+                Pair(query, category)
+            }.collectLatest { (query, category) ->
+
+                Log.d(TAG, "🔍 Search/Filter changed - query: '$query', category: ${category?.name ?: "all"}")
+
+                // Obtener el Flow apropiado según si hay búsqueda o no
+                val newsFlow = if (query.isNotBlank()) {
+                    repository.searchNewsItemsCached(query)
+                } else {
+                    repository.getNewsFeedCached()
                 }
-                .collect { cachedItems ->
-                    // Apply category filter if selected
-                    val categoryId = _selectedCategory.value?.category_id
-                    val filteredItems = if (categoryId != null) {
-                        cachedItems.filter { it.category_id == categoryId }
+
+                newsFlow.catch { exception ->
+                    Log.e(TAG, " Error in Flow observation", exception)
+                }.collect { items ->
+                    // Aplicar filtro de categoría si está seleccionado
+                    val filteredItems = if (category != null) {
+                        items.filter { it.category_id == category.category_id }
                     } else {
-                        cachedItems
+                        items
                     }
 
                     _newsItems.value = filteredItems
-                    Log.d(TAG, "✅ Flow emitted: ${filteredItems.size} items (category: ${categoryId ?: "all"})")
+                    Log.d(TAG, " Flow emitted: ${filteredItems.size} items (query: '$query', category: ${category?.name ?: "all"})")
+
+                    // UPDATE: Detectar si hay búsqueda activa sin resultados
+                    _noSearchResults.value = query.isNotBlank() && filteredItems.isEmpty()
 
                     updateCacheStatus()
 
@@ -194,6 +232,7 @@ class NewsFeedViewModel(
                         _errorMessage.value = null
                     }
                 }
+            }
         }
     }
 
@@ -237,6 +276,26 @@ class NewsFeedViewModel(
                 Log.e(TAG, "Error clearing category filter", e)
             }
         }
+    }
+// ============================================
+    // SEARCH FUNCTIONS
+    // ============================================
+
+    /**
+     * Update search query
+     * Automatically triggers Flow to refresh results
+     */
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        Log.d(TAG, "🔍 Search query updated: '$query'")
+    }
+
+    /**
+     * Clear search query
+     */
+    fun clearSearch() {
+        _searchQuery.value = ""
+        Log.d(TAG, "🔍 Search cleared")
     }
 
     // ============================================
@@ -288,6 +347,13 @@ class NewsFeedViewModel(
 
     fun refreshNewsFeed() {
         Log.d(TAG, "🔄 Manual refresh requested")
+
+        // Limpiar búsqueda al hacer refresh (UX más clara)
+        if (_searchQuery.value.isNotBlank()) {
+            Log.d(TAG, "🔍 Clearing search on refresh")
+            _searchQuery.value = ""
+        }
+
         loadNewsItems(forceRefresh = true)
     }
 
@@ -309,11 +375,50 @@ class NewsFeedViewModel(
         viewModelScope.launch {
             try {
                 repository.clearCache()
+                // Limpiar search cache solo si no hay búsqueda activa
+                if (_searchQuery.value.isBlank()) {
+                    repository.clearSearchCache()
+                }
                 _cacheStatus.value = "Cache cleared"
                 loadNewsItems(forceRefresh = true)
             } catch (e: Exception) {
                 Log.e(TAG, "Error clearing cache", e)
             }
+        }
+    }
+
+    /**
+     * Clear search query cache
+     * Useful for testing or when search results seem outdated
+     */
+    fun clearSearchCache() {
+        viewModelScope.launch {
+            try {
+                repository.clearSearchCache()
+                Log.d(TAG, "Search query cache cleared")
+
+                // Re-trigger search if there's an active query
+                if (_searchQuery.value.isNotBlank()) {
+                    val currentQuery = _searchQuery.value
+                    _searchQuery.value = ""
+                    delay(100)  // Small delay to trigger Flow
+                    _searchQuery.value = currentQuery
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error clearing search cache", e)
+            }
+        }
+    }
+
+    /**
+     * Get search cache statistics for debugging/analytics
+     */
+    suspend fun getSearchCacheStats(): String {
+        return try {
+            val stats = repository.getSearchCacheStats()
+            "Search Cache: ${stats.totalQueries}/${stats.maxSize} queries (TTL: ${stats.ttlHours}h)"
+        } catch (e: Exception) {
+            "Search Cache: unavailable"
         }
     }
 

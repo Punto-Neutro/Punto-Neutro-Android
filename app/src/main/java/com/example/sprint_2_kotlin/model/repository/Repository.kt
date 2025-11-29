@@ -61,6 +61,18 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     // Cache expiration time: 30 minutes in milliseconds
     private val CACHE_EXPIRATION_TIME = 30 * 60 * 1000L
+    // ============================================
+    // SEARCH QUERY CACHE (LRU + TTL)
+    // ============================================
+
+    /**
+     * LRU Cache for search queries with 24h TTL
+     * Stores query → list of news item IDs
+     */
+    private val searchQueryCache = SearchQueryCache(
+        maxSize = 50,  // Máximo 50 búsquedas en cache
+        ttlMillis = 24 * 60 * 60 * 1000  // 24 horas
+    )
 
     companion object {
         private const val TAG = "Repository"
@@ -89,6 +101,12 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 this.email = email
                 this.password = password
             }
+            val uid = auth.currentUserOrNull()?.id
+            val data = UserProfile(
+                uid,email
+            )
+            client.postgrest.from("user_profiles").insert(listOf(data))
+
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -454,8 +472,11 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             if (forceRefresh) {
                 newsItemDao.deleteAllNewsItems()
                 Log.d(TAG, "Cache cleared due to force refresh")
-            }
 
+                // Limpiar search cache
+                clearSearchCache()
+                Log.d(TAG, "🧹 Search cache cleared")
+            }
             val entities = freshNewsItems.map { it.toEntity() }
             newsItemDao.insertAllNewsItems(entities)
 
@@ -522,6 +543,87 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         val expirationTimestamp = System.currentTimeMillis() - CACHE_EXPIRATION_TIME
         newsItemDao.deleteOldCachedItems(expirationTimestamp)
         Log.d(TAG, "Expired cache items deleted")
+    }
+
+    /**
+     * Search news items in cache by query
+     * Searches in both title and short_description fields
+     * Returns Flow for reactive updates
+     *
+     * @param searchQuery The text to search for (case-insensitive)
+     * @return Flow of matching NewsItems, or all items if query is blank
+     */
+    /**
+     * Search news items in cache by query with LRU caching
+     *
+     * Strategy:
+     * 1. Check if query is in LRU cache (instant return)
+     * 2. If cache miss, query Room database
+     * 3. Store result in LRU cache for future use
+     *
+     * @param searchQuery The text to search for (case-insensitive)
+     * @return Flow of matching NewsItems, or all items if query is blank
+     */
+    fun searchNewsItemsCached(searchQuery: String): Flow<List<NewsItem>> {
+        return if (searchQuery.isBlank()) {
+            // Empty query → return all news
+            newsItemDao.getAllNewsItems().map { cachedEntities ->
+                cachedEntities.map { it.toNewsItem() }
+            }
+        } else {
+            // Check LRU cache first
+            val cachedIds = searchQueryCache.get(searchQuery)
+
+            if (cachedIds != null) {
+                // CACHE HIT - Return cached results instantly
+                Log.d(TAG, "Query cache HIT: returning ${cachedIds.size} cached results for '$searchQuery'")
+
+                // Convert IDs to NewsItems from Room
+                newsItemDao.getAllNewsItems().map { allItems ->
+                    allItems
+                        .filter { it.news_item_id in cachedIds }
+                        .map { it.toNewsItem() }
+                }
+            } else {
+                // CACHE MISS - Query Room and cache result
+                Log.d(TAG, "Query cache MISS: searching Room for '$searchQuery'")
+
+                newsItemDao.searchNewsItems(searchQuery).map { results ->
+                    // Store result in cache
+                    val newsItemIds = results.map { it.news_item_id }
+                    searchQueryCache.put(searchQuery, newsItemIds)
+
+                    Log.d(TAG, "Cached search result: '$searchQuery' → ${newsItemIds.size} items")
+
+                    // Return NewsItems
+                    results.map { it.toNewsItem() }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear search query cache
+     * Useful when news data is refreshed
+     */
+    fun clearSearchCache() {
+        searchQueryCache.clear()
+        Log.d(TAG, "🧹 Search query cache cleared")
+    }
+
+    /**
+     * Get search cache statistics
+     */
+    fun getSearchCacheStats(): SearchQueryCache.CacheStats {
+        return searchQueryCache.getStats()
+    }
+
+    /**
+     * Remove expired search queries from cache
+     * Called periodically to clean up old entries
+     */
+    suspend fun cleanExpiredSearchCache() = withContext(Dispatchers.IO) {
+        searchQueryCache.removeExpired()
     }
 
 // ============================================
@@ -760,6 +862,10 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             if (forceRefresh) {
                 newsItemDao.deleteAllNewsItems()
                 Log.d(TAG, "Cache cleared due to force refresh")
+
+                // Limpiar search cache para que las búsquedas se re-ejecuten con datos frescos
+                clearSearchCache()
+                Log.d(TAG, "🧹 Search cache cleared - queries will re-execute with fresh data")
             }
 
             val entities = freshNewsItems.map { it.toEntity() }
