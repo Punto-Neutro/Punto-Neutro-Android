@@ -3,34 +3,94 @@ package com.example.sprint_2_kotlin.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sprint_2_kotlin.model.auth.SessionManager
 import com.example.sprint_2_kotlin.model.data.AppDatabase
-import com.example.sprint_2_kotlin.model.network.NetworkStatusTracker
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * AuthViewModel - Handles authentication logic
+ * AuthViewModel - Handles authentication logic with persistent session
  *
- * CHANGE: Now extends AndroidViewModel to get Application context
- * This is needed because Repository now requires context for Room Database
+ * Now includes SessionManager to persist login credentials and auto-login
  */
 class AuthViewModel(
-    application: Application // OJO CAMBIO: ahora recibe Application
-) : AndroidViewModel(application) { // OJOO CAMBIO: extiende AndroidViewModel
+    application: Application
+) : AndroidViewModel(application) {
 
-    // IMPORTANTE CAMBIO: Repository ahora recibe context
+    // Database DAOs
     private val dao = AppDatabase.getDatabase(application).CommentDao()
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
-    // CAMBIO: Repository ahora recibe context
-    private val repository = Repository(application.applicationContext, dao,daonews)
+
+    // Repository for authentication
+    private val repository = Repository(application.applicationContext, dao, daonews)
+
+    // Session Manager for persistent login
+    private val sessionManager = SessionManager(application.applicationContext)
+
+    // UI State
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    init {
+        // Check if user is already logged in when ViewModel is created
+        checkExistingSession()
+    }
 
+    /**
+     * Check if there's an existing valid session and auto-login
+     */
+    private fun checkExistingSession() {
+        viewModelScope.launch {
+            try {
+                val isValid = sessionManager.isSessionValid()
+                if (isValid) {
+                    // Get stored credentials
+                    val credentials = sessionManager.getStoredCredentials()
+                    if (credentials != null) {
+                        val (email, password) = credentials
+
+                        // Attempt auto-login with stored credentials
+                        _uiState.value = _uiState.value.copy(
+                            email = email,
+                            password = password,
+                            isCheckingSession = true
+                        )
+
+                        val loginSuccess = repository.signIn(email, password)
+
+                        if (loginSuccess) {
+                            println("DEBUG: Auto-login successful for $email")
+                            _uiState.value = _uiState.value.copy(
+                                isSuccess = true,
+                                isCheckingSession = false
+                            )
+                        } else {
+                            // Credentials invalid, clear session
+                            println("DEBUG: Auto-login failed, clearing session")
+                            sessionManager.clearSession()
+                            _uiState.value = _uiState.value.copy(
+                                email = "",
+                                password = "",
+                                isCheckingSession = false
+                            )
+                        }
+                    } else {
+                        _uiState.value = _uiState.value.copy(isCheckingSession = false)
+                    }
+                } else {
+                    // Session expired or doesn't exist
+                    sessionManager.clearSession()
+                    _uiState.value = _uiState.value.copy(isCheckingSession = false)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                println("DEBUG: Error checking session: ${e.message}")
+                _uiState.value = _uiState.value.copy(isCheckingSession = false)
+            }
+        }
+    }
 
     fun onEmailChange(value: String) {
         _uiState.value = _uiState.value.copy(email = value)
@@ -44,6 +104,18 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val success = repository.signIn(_uiState.value.email, _uiState.value.password)
+
+            if (success) {
+                // Save session after successful login (with email and password)
+                val userId = 1 // Replace with actual user ID from your repository/API if available
+                sessionManager.saveSession(
+                    email = _uiState.value.email,
+                    password = _uiState.value.password,
+                    userId = userId
+                )
+                println("DEBUG: Login successful, session saved for ${_uiState.value.email}")
+            }
+
             println("DEBUG: Login result = $success")
             _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = success)
         }
@@ -53,6 +125,18 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val success = repository.signUp(_uiState.value.email, _uiState.value.password)
+
+            if (success) {
+                // Save session after successful registration (with email and password)
+                val userId = 1 // Replace with actual user ID from your repository/API if available
+                sessionManager.saveSession(
+                    email = _uiState.value.email,
+                    password = _uiState.value.password,
+                    userId = userId
+                )
+                println("DEBUG: Registration successful, session saved for ${_uiState.value.email}")
+            }
+
             _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = success)
         }
     }
@@ -60,10 +144,60 @@ class AuthViewModel(
     fun loginWithBiometric() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            // Check if user session exists
-            val isLoggedIn = repository.isUserLoggedIn()
-            _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = isLoggedIn)
+
+            // Get stored credentials
+            val credentials = sessionManager.getStoredCredentials()
+
+            if (credentials != null) {
+                val (email, password) = credentials
+
+                // Attempt login with stored credentials
+                val success = repository.signIn(email, password)
+
+                if (success) {
+                    println("DEBUG: Biometric login successful for $email")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        email = email,
+                        password = password
+                    )
+                } else {
+                    // Credentials no longer valid, clear session
+                    println("DEBUG: Biometric login failed, credentials invalid")
+                    sessionManager.clearSession()
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = false
+                    )
+                }
+            } else {
+                // No stored credentials
+                println("DEBUG: No stored credentials for biometric login")
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isSuccess = false
+                )
+            }
         }
+    }
+
+    /**
+     * Logout user and clear session
+     */
+    fun logout() {
+        viewModelScope.launch {
+            sessionManager.clearSession()
+            println("DEBUG: User logged out, session cleared")
+            _uiState.value = AuthUiState() // Reset to initial state
+        }
+    }
+
+    /**
+     * Get stored user email from session
+     */
+    fun getUserEmail(): kotlinx.coroutines.flow.Flow<String?> {
+        return sessionManager.userEmail
     }
 }
 
@@ -71,11 +205,6 @@ data class AuthUiState(
     val email: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val isCheckingSession: Boolean = true // Track if we're checking existing session
 )
-
-
-
-
-
-
