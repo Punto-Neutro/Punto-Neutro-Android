@@ -282,7 +282,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     // Add News Function with connectivity resistance
     //========================================================
 
-    suspend fun addNews(url: String, title: String, description: String, author_type: String, author_institution: String, category_id: Int): Int{
+    suspend fun addNews(url: String, category_id: Int): Int{
 
         if (networkMonitor.isConnected.value){
             try {
@@ -296,6 +296,17 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 val userProfileIdActual = profile.user_profile_id
 
                 val imageUrl = extractImageUrlFromArticle(url) ?: ""
+
+                val title = extractTitle(url) ?: ""
+
+                val description = extractDescription(url) ?: ""
+
+                val author_type = extractAuthor(url) ?: ""
+
+                val author_institution = extractAuthorInstitution(url) ?: ""
+
+
+
 
                 val datos = NewsItem(
                     userProfileIdActual,
@@ -334,7 +345,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 return 1  }
 
         }else{
-            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = title, short_description = description, image_url = "", category_id = category_id, author_type = author_type, author_institution = author_institution, average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = description, original_source_url = url, publication_date = "", added_to_appDate = ""))
+            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = "", short_description = "", image_url = "", category_id = category_id, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
             Log.w(TAG,"Se activo el encolamiento")
             return 2
 
@@ -373,16 +384,24 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                     // Fetch the image URL online, as it wasn't available offline
                     val imageUrl = extractImageUrlFromArticle(pendingItem.original_source_url) ?: ""
 
+                    val title = extractTitle(pendingItem.original_source_url) ?: ""
+
+                    val description = extractDescription(pendingItem.original_source_url) ?: ""
+
+                    val author_type = extractAuthor(pendingItem.original_source_url) ?: ""
+
+                    val author_institution = extractAuthorInstitution(pendingItem.original_source_url) ?: ""
+
                     // Create a NewsItem object for Supabase, mapping fields from NewsItemEntity
                     val newsItemToUpload = NewsItem(
-                        title = pendingItem.title,
-                        short_description = pendingItem.long_description, // Assuming long_description holds the full text
-                        long_description = pendingItem.short_description,
+                        title = title,
+                        short_description = description, // Assuming long_description holds the full text
+                        long_description = description,
                         image_url = imageUrl,
                         original_source_url = pendingItem.original_source_url,
                         category_id = pendingItem.category_id,
-                        author_type = pendingItem.author_type,
-                        author_institution = pendingItem.author_institution,
+                        author_type = author_type,
+                        author_institution = author_institution,
                         user_profile_id = profile.user_profile_id,
                         total_ratings = 0, // Starts with no ratings
                         average_reliability_score = 0.0 // Starts with no score
@@ -928,6 +947,128 @@ suspend fun extractImageUrlFromArticle(url: String): String? {
         } catch (e: Exception) {
             Log.e("ImageExtractor", "An unexpected error occurred", e)
             null
+        }
+    }
+}
+
+
+suspend fun extractTitle(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
+                .get()
+
+            // 1. Try Open Graph title
+            val ogTitle = doc.select("meta[property=og:title]").attr("content")
+            if (ogTitle.isNotBlank()) return@withContext ogTitle
+
+            // 2. Try Twitter title
+            val twitterTitle = doc.select("meta[name=twitter:title]").attr("content")
+            if (twitterTitle.isNotBlank()) return@withContext twitterTitle
+
+            // 3. Fallback to standard <title> tag
+            val docTitle = doc.title()
+            if (docTitle.isNotBlank()) return@withContext docTitle
+
+            null
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting title from $url", e)
+            null
+        }
+    }
+}
+
+suspend fun extractAuthor(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
+                .get()
+
+            // 1. Try standard author meta tags
+            val author = doc.select("meta[name=author]").attr("content")
+            if (author.isNotBlank()) return@withContext author
+
+            // 2. Try Open Graph article author
+            val ogAuthor = doc.select("meta[property=article:author]").attr("content")
+            if (ogAuthor.isNotBlank()) return@withContext ogAuthor
+
+            // 3. Common HTML patterns (e.g., classes named "author" or "byline")
+            val htmlAuthor = doc.select("[class*=author], [id*=author], [class*=byline]").first()?.text()
+            if (htmlAuthor != null && htmlAuthor.isNotBlank()) return@withContext htmlAuthor
+
+            return@withContext "Anonimo"
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting author from $url", e)
+            return@withContext "Anonimo"
+        }
+    }
+}
+
+suspend fun extractDescription(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
+                .get()
+
+            // 1. Try Open Graph description
+            val ogDesc = doc.select("meta[property=og:description]").attr("content")
+            if (ogDesc.isNotBlank()) return@withContext ogDesc
+
+            // 2. Try standard meta description
+            val metaDesc = doc.select("meta[name=description]").attr("content")
+            if (metaDesc.isNotBlank()) return@withContext metaDesc
+
+            // 3. Try Twitter description
+            val twitterDesc = doc.select("meta[name=twitter:description]").attr("content")
+            if (twitterDesc.isNotBlank()) return@withContext twitterDesc
+
+            // 4. Fallback: Get the first paragraph of the article body
+            val firstParagraph = doc.select("article p, main p, .content p").first()?.text()
+            if (firstParagraph != null && firstParagraph.isNotBlank()) {
+                return@withContext if (firstParagraph.length > 200) firstParagraph.take(197) + "..." else firstParagraph
+            }
+
+            return@withContext "Anonimo"
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting description from $url", e)
+            return@withContext "Anonimo"
+        }
+    }
+}
+
+suspend fun extractAuthorInstitution(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
+                .get()
+
+            // 1. Try Open Graph site name (Very common for news outlets)
+            val ogSiteName = doc.select("meta[property=og:site_name]").attr("content")
+            if (ogSiteName.isNotBlank()) return@withContext ogSiteName
+
+            // 2. Try the "publisher" meta tag
+            val publisher = doc.select("meta[name=publisher]").attr("content")
+            if (publisher.isNotBlank()) return@withContext publisher
+
+            // 3. Try article:publisher (often a link to a FB page, but can be text)
+            val articlePublisher = doc.select("meta[property=article:publisher]").attr("content")
+            if (articlePublisher.isNotBlank()) {
+                // If it's a URL, we return the site name part, otherwise the text
+                return@withContext articlePublisher.substringAfterLast("/").replace("-", " ").capitalize()
+            }
+
+            // 4. Fallback: Search for common classes in the footer or header
+            val brandName = doc.select(".brand, .logo-text, [class*='source']").first()?.text()
+            if (brandName != null && brandName.isNotBlank()) return@withContext brandName
+
+            return@withContext "Anonimo"
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting institution from $url", e)
+            return@withContext "Anonimo"
         }
     }
 }

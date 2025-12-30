@@ -451,11 +451,11 @@ class NewsFeedViewModel(
         Log.d(TAG, "🧹 NewsFeedViewModel cleared")
     }
 
-    fun AddNews(title:String, Url: String, Author_type: String, Author_institution: String, Description: String, Category_id: Int, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit ) {
+    fun AddNews(Url: String, Category_id: Int, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit ) {
         viewModelScope.launch {
 
             try {
-            val response = repository.addNews(title = title, url = Url, author_type = Author_type, author_institution = Author_institution, description = Description, category_id = Category_id)
+            val response = repository.addNews( url = Url,  category_id = Category_id)
 
             if (response == 0){
                 withContext(Dispatchers.Main){
