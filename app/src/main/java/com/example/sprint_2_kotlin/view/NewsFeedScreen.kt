@@ -328,13 +328,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
             ) {
                 Text("Add an article", style = MaterialTheme.typography.titleLarge, color = textColor)
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+
                 // Dropdown menu for categories
                 ExposedDropdownMenuBox(
                     expanded = expanded,
@@ -377,31 +371,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                         .fillMaxWidth()
 
                 )
-                Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = Author_type,
-                    onValueChange = { Author_type = it },
-                    label = {Text("Author type")},
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = Author_institution,
-                    onValueChange = { Author_institution = it },
-                    label = {Text("Author institution")},
-                    modifier = Modifier.fillMaxWidth()
-
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = Description,
-                    onValueChange = { Description = it },
-                    label = { Text("Description")},
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -417,11 +387,11 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
 
                             // Handle submission logic here
                             viewModel.AddNews(
-                                title,
+
                                 URL,
-                                Author_type,
-                                Author_institution,
-                                Description,
+
+
+
                                 selectedCategory!!.category_id,
                                 onSuccess = {
                                     showSuccessSnackbar = true

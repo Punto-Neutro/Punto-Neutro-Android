@@ -28,6 +28,9 @@ import com.example.sprint_2_kotlin.viewmodel.NewsItemDetailViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel  // bookmark
 import utils.NetworkMonitor
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalUriHandler // Add this import
+import androidx.compose.foundation.clickable // Ensure this is imported
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +43,10 @@ fun NewsItemDetailScreen(
     viewModel: NewsItemDetailViewModel = viewModel(),
     bookmarkViewModel: BookmarkViewModel = viewModel()  // bookmark
 ) {
+
+    // Inside NewsItemDetailScreen function
+    val uriHandler = LocalUriHandler.current // 1. Get the URI handler
+
     val context = LocalContext.current
     val networkMonitor = remember { NetworkMonitor(context) }
 
@@ -76,6 +83,7 @@ fun NewsItemDetailScreen(
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
     val primaryColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1976D2)
+
 
     Scaffold(
         topBar = {
@@ -211,7 +219,17 @@ fun NewsItemDetailScreen(
                         Text(
                             text = "Original source: ${item.original_source_url}",
                             fontSize = 12.sp,
-                            color = primaryColor
+                            color = primaryColor,
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clickable {
+                                    // 2. Open the URL when clicked
+                                    try {
+                                        uriHandler.openUri(item.original_source_url)
+                                    } catch (e: Exception) {
+                                        // Handle cases where the URL might be malformed
+                                    }
+                                }
                         )
                     }
 
