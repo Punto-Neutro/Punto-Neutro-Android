@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,6 +56,8 @@ fun NewsFeedScreen(
     modifier: Modifier = Modifier
 ) {
     val newsItems by viewModel.newsItems.collectAsState()
+    val lazyListState = rememberLazyListState() // Add this state
+
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val cacheStatus by viewModel.cacheStatus.collectAsState()
@@ -66,6 +69,18 @@ fun NewsFeedScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
+
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
+                ?: return@derivedStateOf false
+
+            // Load more when user is 5 items away from the bottom
+            lastVisibleItem.index >= lazyListState.layoutInfo.totalItemsCount - 5
+        }
+    }
+
+
 
     if (showDialog) {
         FeedbackDialog(
@@ -84,6 +99,12 @@ fun NewsFeedScreen(
 
     val context = LocalContext.current
     val networkMonitor = remember { NetworkMonitor(context) }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value) {
+            viewModel.loadNextPage()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.startNetworkObserver(networkMonitor)
@@ -175,6 +196,7 @@ fun NewsFeedScreen(
                     }
                 }else {
                     LazyColumn(
+                        state = lazyListState,
                         modifier = modifier
                             .fillMaxSize()
                             .background(backgroundColor)
@@ -263,6 +285,14 @@ fun NewsFeedScreen(
                             }
                         }
 
+                        if (isLoading && newsItems.isNotEmpty()) {
+                            item {
+                                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        }
+
                         if (newsItems.isNotEmpty()) {
                             item {
                                 Text(
@@ -322,7 +352,8 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp).verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {

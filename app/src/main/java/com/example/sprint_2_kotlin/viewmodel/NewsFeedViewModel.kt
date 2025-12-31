@@ -30,6 +30,13 @@ class NewsFeedViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
+    // Pagination Process
+
+
+    private var currentOffset = 0
+    private val PAGE_SIZE = 20
+    private var isLastPage = false
+
     private val _isConnected = MutableStateFlow(true)
     val isConnected: StateFlow<Boolean> get() = _isConnected
 
@@ -305,6 +312,7 @@ class NewsFeedViewModel(
     private fun loadNewsItems(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             try {
+                currentOffset = 20
                 if (forceRefresh) {
                     _isRefreshing.value = true
                     Log.d(TAG, "🔄 Force refresh triggered")
@@ -345,6 +353,31 @@ class NewsFeedViewModel(
         }
     }
 
+
+    fun loadNextPage() {    if (isLoading.value || isLastPage) return
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val newItems = repository.getNewsItems(pageSize = PAGE_SIZE, startRow = currentOffset)
+
+                if (newItems.isEmpty()) {
+                    isLastPage = true
+                } else {
+                    // Append new items to the existing list
+                    _newsItems.value = _newsItems.value + newItems
+                    currentOffset += PAGE_SIZE
+                }
+            } catch (e: Exception) {
+                // Handle error
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+
+
     fun refreshNewsFeed() {
         Log.d(TAG, "🔄 Manual refresh requested")
 
@@ -353,6 +386,10 @@ class NewsFeedViewModel(
             Log.d(TAG, "🔍 Clearing search on refresh")
             _searchQuery.value = ""
         }
+
+        currentOffset = 0
+        isLastPage = false
+        _newsItems.value = emptyList()
 
         loadNewsItems(forceRefresh = true)
     }
