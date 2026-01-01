@@ -309,49 +309,40 @@ class NewsFeedViewModel(
     // LOAD NEWS ITEMS
     // ============================================
 
-    private fun loadNewsItems(forceRefresh: Boolean = false) {
+    // NewsFeedViewModel.kt
+
+    fun loadNewsItems(forceRefresh: Boolean = false) {
+        // If we are already loading, don't trigger another one
+        if (_isLoading.value || _isRefreshing.value) return
+
         viewModelScope.launch {
             try {
-                currentOffset = 20
-                if (forceRefresh) {
-                    _isRefreshing.value = true
-                    Log.d(TAG, "🔄 Force refresh triggered")
-                } else {
-                    _isLoading.value = true
-                    Log.d(TAG, "🔄 Loading news items")
-                }
-
-                _errorMessage.value = null
+                // Determine if we show the big loader or the swipe-refresh spinner
+                if (forceRefresh) _isRefreshing.value = true else _isLoading.value = true
 
                 val categoryId = _selectedCategory.value?.category_id
-                Log.d(TAG, "Loading with categoryId: $categoryId, forceRefresh: $forceRefresh")
 
+                // This calls Supabase and updates the Room Database
+                // The Flow in observeNewsFeedFlow will pick up the changes automatically
                 repository.loadNewsFeedWithFilter(
                     categoryId = categoryId,
                     forceRefresh = forceRefresh
                 )
 
-                Log.d(TAG, "✅ News feed loaded successfully")
+                // If we successfully fetched, reset pagination offsets
+                currentOffset = 20
+                isLastPage = false
 
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error loading news items", e)
-                e.printStackTrace()
-
-                if (_newsItems.value.isEmpty()) {
-                    _errorMessage.value = "No internet connection. Unable to load news."
-                    Log.w(TAG, "⚠️ No cached data available while offline")
-                } else {
-                    _errorMessage.value = "Could not refresh. Showing cached news."
-                    Log.i(TAG, "ℹ️ Using ${_newsItems.value.size} cached items while offline")
-                }
-
+                Log.e(TAG, "Error fetching news", e)
+                _errorMessage.value = "Failed to update news feed"
             } finally {
                 _isLoading.value = false
                 _isRefreshing.value = false
-                Log.d(TAG, "🏁 Loading operation completed")
             }
         }
     }
+
 
 
     fun loadNextPage() {    if (isLoading.value || isLastPage) return
