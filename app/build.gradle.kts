@@ -42,6 +42,12 @@ android {
 }
 
 dependencies {
+    //dependencies for language switch
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+
+
+
     //dependencies for Supabase... check https://github.com/supabase-community/supabase-kt for latest versions
     implementation("io.github.jan-tennert.supabase:auth-kt:3.2.4")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.2.4")

@@ -1,7 +1,11 @@
 package com.example.sprint_2_kotlin.view
-
+import com.example.sprint_2_kotlin.R
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,22 +17,30 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.ReadHistoryViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import com.example.sprint_2_kotlin.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
+import LanguageManager
+
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
+
     isDarkMode: Boolean = false,
     onToggleDarkMode: (Boolean) -> Unit = {},
     onLogout: () -> Unit = {},
@@ -65,6 +77,8 @@ fun ProfileScreen(
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -337,6 +351,12 @@ fun EditProfileDialog(
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
 
+    // State to manage the language dropdown
+    var languageExpanded by remember { mutableStateOf(false) }
+    // Get current app language (e.g., "en" or "es")
+    val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "en" }
+    var selectedLanguage by remember { mutableStateOf(currentLocale) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = surfaceColor,
@@ -404,6 +424,75 @@ fun EditProfileDialog(
                     color = if (isDarkMode) Color(0xFF333333) else Color(0xFFE0E0E0)
                 )
 
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { languageExpanded = true } // Make the whole row clickable
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Icon and Text
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = "Language",
+                            tint = textColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = stringResource(id = R.string.Change_Language),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = textColor
+                            )
+                            Text(
+                                text = if (selectedLanguage.startsWith("es")) "Español" else "English",
+                                fontSize = 12.sp,
+                                color = secondaryTextColor
+                            )
+                        }
+                    }
+
+                    // Dropdown Menu for selecting language
+                    Box {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Change Language",
+                            tint = secondaryTextColor
+                        )
+                        DropdownMenu(
+                            expanded = languageExpanded,
+                            onDismissRequest = { languageExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("English") },
+                                onClick = {
+                                    LanguageManager.setLanguage("en")
+                                    selectedLanguage = "en"
+
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Español") },
+                                onClick = {
+                                    LanguageManager.setLanguage("es")
+                                    selectedLanguage = "es"
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Divider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = if (isDarkMode) Color(0xFF333333) else Color(0xFFE0E0E0)
+                )
+
+
+
                 // Placeholder para futuras opciones
                 Text(
                     text = "More settings coming soon...",
@@ -414,13 +503,14 @@ fun EditProfileDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
-                )
+            TextButton(
+                onClick = onDismiss // This simply closes the dialog
             ) {
-                Text("Done", color = Color.White)
+                Text(
+                    text = "Done",
+                    color = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A),
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     )
@@ -514,7 +604,7 @@ fun UserProfileCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("Edit profile", fontSize = 14.sp)
+                Text(stringResource(id = R.string.Edit) + stringResource(R.string.profile), fontSize = 14.sp)
             }
 
             Spacer(Modifier.height(8.dp))

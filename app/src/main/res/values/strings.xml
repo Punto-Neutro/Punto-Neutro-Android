@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Punto_Neutro</string>
+    <string name="profile">Profile</string>
+    <string name="notifications">notifications</string>
+    <string name="Edit">Edit </string>
+    <string name="Change_Language">Change Language</string>
 </resources>
