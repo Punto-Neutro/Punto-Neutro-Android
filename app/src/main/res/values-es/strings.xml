@@ -7,12 +7,23 @@
     <string name="Change_Language">Cambiar Idioma</string>
     <!-- comentario -->
     <!-- Login -->
-    <string name="Login">Login</string>
+    <string name="Login_in_automatically">Iniciando sesión...</string>
+    <string name="Login_failed">Inicio de sesión fallido</string>
+    <string name="Fighting_misinformation">Combatiendo la información falsa</string>
+    <string name="A_collaborative_platform_where...">Una plataforma colaborativa donde la comunidad verifica noticias en tiempo real para combatir la información falsa.</string>
+    <string name="Register_failed">Registro fallido</string>
+    <string name="Source_credibility">Análisis de credibilidad de la fuente</string>
+    <string name="Realtime_collaborative_verification">Verificación colaborativa en tiempo real</string>
+    <string name="Network_of_verified_users">Red de usuarios verificados</string>
+    <string name="Access_your_account">Accede a tu cuenta</string>
+    <string name="Enter_your_credentials_to_continue">Ingresa tus credenciales para contiunar</string>
+    <string name="Sign_in">Inicia sesión</string>
+    <string name="With_fingerprint">con huella</string>
     <string name="Register">Registrarse</string>
-    <string name="Forgot_Password">Olvidar contraseña</string>
-    <string name="Email">Email</string>
+    <string name="You.example.com">tu@ejemplo.com</string>
+    <string name="Forgot_Password">¿Olvidaste tu contraseña?</string>
+    <string name="Email">Correo</string>
     <string name="Password">Contraseña</string>
-
 
 
     <!-- News Feed -->
@@ -72,6 +83,18 @@
 
 
     <!-- News Detail -->
+    <string name="By">Por</string>
+    <string name="at">en</string>
+    <string name="Published">Publicado</string>
+    <string name="Source">Fuente</string>
+    <string name="total_ratings">calificaciones</string>
+    <string name="Add_comment">Agregar un comentario</string>
+    <string name="Ratings_and_comments">Calificaciones y comentarios</string>
+    <string name="News_Details">Detalles de la noticia</string>
+    <string name="Comment">Comentario</string>
+    <string name="Value">Valor</string>
+
+
     <!-- Guide tips -->
     <!-- Boton navigation bar -->
     <string name="Home">Home</string>

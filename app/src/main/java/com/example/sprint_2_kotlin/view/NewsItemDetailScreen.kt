@@ -30,6 +30,8 @@ import utils.NetworkMonitor
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.platform.LocalUriHandler // Add this import
 import androidx.compose.foundation.clickable // Ensure this is imported
+import androidx.compose.ui.res.stringResource
+import com.example.sprint_2_kotlin.R
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,7 +92,7 @@ fun NewsItemDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "News Details",
+                        stringResource(R.string.News_Details),
                         color = textColor
                     )
                 },
@@ -181,11 +183,6 @@ fun NewsItemDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Category ID: ${item.category_id}",
-                            fontSize = 12.sp,
-                            color = primaryColor
-                        )
                         ReliabilityIndicator(item.average_reliability_score)
                     }
 
@@ -193,12 +190,12 @@ fun NewsItemDetailScreen(
 
                     // Meta info
                     Text(
-                        text = "By ${item.author_type} at ${item.author_institution}",
+                        text = stringResource(R.string.By) + " ${item.author_type} "+ stringResource(R.string.at) + " ${item.author_institution}",
                         fontSize = 14.sp,
                         color = secondaryTextColor
                     )
                     Text(
-                        text = "Published ${item.days_since} days ago • ${item.total_ratings} total ratings",
+                        text =stringResource(R.string.Published) + " ${item.days_since} ${stringResource(R.string.days_ago)} • ${item.total_ratings} ${stringResource(R.string.total_ratings)}",
                         fontSize = 12.sp,
                         color = secondaryTextColor
                     )
@@ -217,7 +214,7 @@ fun NewsItemDetailScreen(
 
                     if (item.original_source_url.isNotEmpty()) {
                         Text(
-                            text = "Original source: ${item.original_source_url}",
+                            text = "${stringResource(R.string.Source)}: ${item.original_source_url}",
                             fontSize = 12.sp,
                             color = primaryColor,
                             modifier = Modifier
@@ -246,7 +243,7 @@ fun NewsItemDetailScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Ratings & Comments",
+                        text = stringResource(R.string.Ratings_and_comments),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textColor
@@ -329,7 +326,7 @@ fun CommentSection(
                     OutlinedTextField(
                         value = comment,
                         onValueChange = { comment = it },
-                        label = { Text("Comentario", color = secondaryTextColor) },
+                        label = { Text(stringResource(R.string.Comment), color = secondaryTextColor) },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 4,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -343,7 +340,8 @@ fun CommentSection(
                     Spacer(Modifier.height(12.dp))
 
                     Text(
-                        text = "Valor: ${"%.2f".format(rating)}",
+                        text = stringResource(R.string.Value) + ": ${(rating * 100).toInt()}",
+
                         fontSize = 14.sp,
                         color = textColor
                     )
@@ -388,7 +386,7 @@ fun CommentSection(
                             containerColor = buttonColor
                         )
                     ) {
-                        Text("Enviar")
+                        Text(stringResource(R.string.Submit))
                     }
 
                     message?.let {

@@ -7,9 +7,22 @@
     <string name="Change_Language">Change Language</string>
     <!-- comentario -->
     <!-- Login -->
-    <string name="Login">Login</string>
+
+    <string name="Login_in_automatically">Logging in automatically...</string>
+    <string name="Login_failed">Login</string>
+    <string name="Fighting_misinformation">Fighting misinformation</string>
+    <string name="A_collaborative_platform_where...">A collaborative platform where the community verifies news in real-time to combat disinformation.</string>
+    <string name="Register_failed">Register failed</string>
+    <string name="Source_credibility">Source_credibility_analysis</string>
+    <string name="Realtime_collaborative_verification">Real-time collaborative verification</string>
+    <string name="Network_of_verified_users">Network of verified users</string>
+    <string name="Access_your_account">Access your account</string>
+    <string name="Enter_your_credentials_to_continue">Enter your credentials to continue</string>
+    <string name="Sign_in">Sign in</string>
+    <string name="With_fingerprint">with fingerprint</string>
     <string name="Register">Register</string>
-    <string name="Forgot_Password">Forgot Password</string>
+    <string name="You.example.com">you@example.com</string>
+    <string name="Forgot_Password">Forgot your password?</string>
     <string name="Email">Email</string>
     <string name="Password">Password</string>
 
@@ -72,6 +85,16 @@
 
 
     <!-- News Detail -->
+    <string name="By">by</string>
+    <string name="at">at</string>
+    <string name="Published">Published</string>
+    <string name="total_ratings">total ratings</string>
+    <string name="Source">Source</string>
+    <string name="Add_comment">Add a comment</string>
+    <string name="Ratings_and_comments">Ratings and comments</string>
+    <string name="News_Details">News Details</string>
+    <string name="Comment">Comment</string>
+    <string name="Value">Value</string>
     <!-- Guide tips -->
     <!-- Boton navigation bar -->
     <string name="Home">Home</string>

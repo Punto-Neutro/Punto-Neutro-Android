@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -68,7 +69,7 @@ fun AuthScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Logging in automatically...",
+                    text = stringResource(R.string.Login_in_automatically),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF666666)
                 )
@@ -118,7 +119,7 @@ fun AuthScreen(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "Fighting misinformation",
+                    text = stringResource(R.string.Fighting_misinformation),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF666666)
                 )
@@ -126,7 +127,7 @@ fun AuthScreen(
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    text = "A collaborative platform where the community verifies news in real-time to combat disinformation.",
+                    text = stringResource(R.string.A_collaborative_platform_where___),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888),
                     textAlign = TextAlign.Center,
@@ -154,17 +155,17 @@ fun AuthScreen(
                 Spacer(Modifier.height(16.dp))
 
                 //  Features Lista
-                FeatureItem("Source credibility analysis")
+                FeatureItem(stringResource(R.string.Source_credibility))
                 Spacer(Modifier.height(6.dp))
-                FeatureItem("Real-time collaborative verification")
+                FeatureItem(stringResource(R.string.Realtime_collaborative_verification))
                 Spacer(Modifier.height(6.dp))
-                FeatureItem("Network of verified users")
+                FeatureItem(stringResource(R.string.Network_of_verified_users))
 
                 Spacer(Modifier.height(24.dp))
 
                 //  "Access your account" section
                 Text(
-                    text = "Access your account",
+                    text = stringResource(R.string.Access_your_account),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF1A1A1A)
@@ -173,7 +174,7 @@ fun AuthScreen(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "Enter your credentials to continue",
+                    text = stringResource(R.string.Enter_your_credentials_to_continue),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888)
                 )
@@ -186,7 +187,7 @@ fun AuthScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TabButton(
-                        text = "Sign In",
+                        text = stringResource(R.string.Sign_in),
                         selected = isLoginMode,
                         onClick = {
                             isLoginMode = true
@@ -195,7 +196,7 @@ fun AuthScreen(
                         modifier = Modifier.weight(1f)
                     )
                     TabButton(
-                        text = "Register",
+                        text = stringResource(R.string.Register),
                         selected = !isLoginMode,
                         onClick = {
                             isLoginMode = false
@@ -209,7 +210,7 @@ fun AuthScreen(
 
                 // el Email Input
                 Text(
-                    text = "Email",
+                    text = stringResource(R.string.Email),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF1A1A1A),
                     fontWeight = FontWeight.Medium,
@@ -221,7 +222,7 @@ fun AuthScreen(
                 OutlinedTextField(
                     value = state.email,
                     onValueChange = viewModel::onEmailChange,
-                    placeholder = { Text("you@example.com", color = Color(0xFFBBBBBB)) },
+                    placeholder = { Text(stringResource(R.string.You_example_com), color = Color(0xFFBBBBBB)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
@@ -235,7 +236,7 @@ fun AuthScreen(
 
                 // el Password Input
                 Text(
-                    text = "Password",
+                    text = stringResource(R.string.Password),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF1A1A1A),
                     fontWeight = FontWeight.Medium,
@@ -293,7 +294,7 @@ fun AuthScreen(
                         )
                     } else {
                         Text(
-                            text = if (isLoginMode) "Sign In" else "Register",
+                            text = if (isLoginMode) stringResource(R.string.Sign_in) else stringResource(R.string.Register),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -328,7 +329,7 @@ fun AuthScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Sign in with Fingerprint",
+                            text = stringResource(R.string.Sign_in) + " " + stringResource(R.string.With_fingerprint),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -340,7 +341,7 @@ fun AuthScreen(
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { /* TODO: Implement forgot password */ }) {
                         Text(
-                            text = "Forgot your password?",
+                            text = stringResource(R.string.Forgot_Password),
                             color = Color(0xFF666666),
                             fontSize = 14.sp
                         )
