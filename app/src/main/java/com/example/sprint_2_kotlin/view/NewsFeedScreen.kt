@@ -44,6 +44,11 @@ import utils.NetworkMonitor
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.example.sprint_2_kotlin.R
+import utils.getTranslatedCategoryName
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
@@ -128,7 +133,7 @@ fun NewsFeedScreen(
                                 color = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
                             )
                             Text(
-                                "Loading news...",
+                                stringResource(R.string.Loading_news),
                                 color = secondaryTextColor,
                                 fontSize = 14.sp
                             )
@@ -148,15 +153,15 @@ fun NewsFeedScreen(
                         ) {
                             Icon(
                                 Icons.Default.Info,
-                                contentDescription = "No news",
+                                contentDescription = stringResource(R.string.No_news),
                                 modifier = Modifier.size(64.dp),
                                 tint = secondaryTextColor
                             )
                             Text(
                                 text = if (selectedCategory != null) {
-                                    "No news in ${selectedCategory?.name} category"
+                                     stringResource(R.string.No_news_in) + "${selectedCategory?.name}" + stringResource(R.string.Category)
                                 } else {
-                                    "No news available"
+                                    stringResource(R.string.No_news_available)
                                 },
                                 fontSize = 16.sp,
                                 color = secondaryTextColor
@@ -169,7 +174,7 @@ fun NewsFeedScreen(
                             ) {
                                 Icon(Icons.Default.Refresh, "Refresh")
                                 Spacer(Modifier.width(8.dp))
-                                Text("Refresh")
+                                Text(stringResource(R.string.Refresh))
                             }
                         }
                     }
@@ -326,7 +331,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Add an article", style = MaterialTheme.typography.titleLarge, color = textColor)
+                Text(stringResource(R.string.Add_an_article), style = MaterialTheme.typography.titleLarge, color = textColor)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Dropdown menu for categories
@@ -335,7 +340,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                     onExpandedChange = { expanded = !expanded }
                 ) {
                     OutlinedTextField(
-                        value = selectedCategory?.name ?: "Select a Category",
+                        value = selectedCategory?.name ?: stringResource(R.string.Select_Category),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Category") },
@@ -352,7 +357,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                     ) {
                         categories.forEach { category ->
                             DropdownMenuItem(
-                                text = { Text(category.name) },
+                                text = { Text(getTranslatedCategoryName(category.name)) },
                                 onClick = {
                                     selectedCategory = category
                                     expanded = false
@@ -378,7 +383,7 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.Cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -397,13 +402,13 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
                                     showSuccessSnackbar = true
                                     onDismiss()
                                 },
-                                onWait = {message = "noticia encolada posterior envio"},
+                                onWait = {message = ":D"},
                                 onError = {},
                             )
                             onDismiss()
                         },
                     ) {
-                        Text("Submit")
+                        Text(stringResource(R.string.Submit))
                     }
                     message?.let {
                         Text(
@@ -443,20 +448,20 @@ fun ConnectionRestoredBanner(
             ) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Connection restored",
+                    contentDescription = stringResource(R.string.Connection_restored),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Connection restored",
+                        text = stringResource(R.string.Connection_restored),
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Refreshing news...",
+                        text = stringResource(R.string.Refreshing_news),
                         color = Color.White.copy(alpha = 0.9f),
                         fontSize = 12.sp
                     )
@@ -469,7 +474,7 @@ fun ConnectionRestoredBanner(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss",
+                    contentDescription = stringResource(R.string.Submit),
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
@@ -495,7 +500,7 @@ fun CategoryTabsFromSupabase(
         item {
             CategoryChip(
                 isDarkMode = isDarkMode,
-                text = "All",
+                text = stringResource(R.string.All),
                 selected = selectedCategory == null,
                 onClick = onClearFilter
             )
@@ -504,7 +509,7 @@ fun CategoryTabsFromSupabase(
         items(categories) { category ->
             CategoryChip(
                 isDarkMode = isDarkMode,
-                text = category.name,
+                text = getTranslatedCategoryName(category.name),
                 selected = selectedCategory?.category_id == category.category_id,
                 onClick = { onCategorySelected(category) }
             )
@@ -538,20 +543,20 @@ fun FilterInfoCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
-                    contentDescription = "Filter",
+                    contentDescription = stringResource(R.string.Filter),
                     tint = textColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Filtered by: $categoryName",
+                        text = stringResource(R.string.Filtered_by) + "$categoryName",
                         fontWeight = FontWeight.SemiBold,
                         color = textColor,
                         fontSize = 13.sp
                     )
                     Text(
-                        text = "$itemCount ${if (itemCount == 1) "article" else "articles"} found",
+                        text = "$itemCount ${if (itemCount == 1) stringResource(R.string.article) else stringResource(R.string.articles)} ${stringResource(R.string.found)}",
                         fontSize = 11.sp,
                         color = textColor
                     )
@@ -564,7 +569,7 @@ fun FilterInfoCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Clear filter",
+                    contentDescription = stringResource(R.string.Clear_filter),
                     tint = textColor,
                     modifier = Modifier.size(18.dp)
                 )
@@ -620,7 +625,7 @@ fun FeedHeader(
             IconButton(onClick = { }) {
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notifications",
+                    contentDescription = stringResource(R.string.notifications),
                     tint = textColor
                 )
             }
@@ -698,11 +703,11 @@ fun SearchBar(
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Search news...", color = placeholderColor) },
+            placeholder = { Text(stringResource(R.string.Search_news), color = placeholderColor) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.Search),
                     tint = iconColor
                 )
             },
@@ -712,7 +717,7 @@ fun SearchBar(
                     IconButton(onClick = { onQueryChange("") }) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Clear search",
+                            contentDescription = stringResource(R.string.Clear_search),
                             tint = iconColor
                         )
                     }
@@ -740,7 +745,7 @@ fun SearchBar(
         ) {
             Icon(
                 imageVector = Icons.Default.FilterList,
-                contentDescription = "Filter",
+                contentDescription = stringResource(R.string.Filter),
                 tint = textColor
             )
         }
@@ -877,7 +882,7 @@ fun NewsCard(
                         color = categoryColor
                     ) {
                         Text(
-                            text = categoryName,
+                            text = getTranslatedCategoryName(categoryName),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             color = Color.White,
                             fontSize = 12.sp,
@@ -895,7 +900,7 @@ fun NewsCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
-                                contentDescription = "Reliability",
+                                contentDescription = stringResource(R.string.Reliability),
                                 tint = Color.White,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -937,13 +942,13 @@ fun NewsCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = if (item.is_verifiedSource) Icons.Default.Verified else Icons.Default.Person,
-                        contentDescription = "Author",
+                        contentDescription = stringResource(R.string.Author),
                         tint = if (item.is_verifiedSource) Color(0xFF4CAF50) else tertiaryTextColor,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Verified author",
+                        text = stringResource(R.string.Verified_author),
                         fontSize = 13.sp,
                         color = secondaryTextColor
                     )
@@ -953,13 +958,13 @@ fun NewsCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = item.author_institution.ifEmpty { "Unknown Source" },
+                        text = item.author_institution.ifEmpty { stringResource(R.string.Unknown_source) },
                         fontSize = 12.sp,
                         color = tertiaryTextColor,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = " • ${item.days_since} days ago",
+                        text = " • ${item.days_since} ${stringResource(R.string.days_ago)}",
                         fontSize = 12.sp,
                         color = tertiaryTextColor
                     )
@@ -1003,7 +1008,7 @@ fun NewsCard(
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = "Read more",
+                            text = stringResource(R.string.Read_more),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -1076,19 +1081,19 @@ fun BottomNavigationBar(
     ) {
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-            label = { Text("Home", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.Home), fontSize = 12.sp) },
             selected = true,
             onClick = { }
         )
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.MenuBook, contentDescription = "Guide") },
-            label = { Text("Guide", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.Guide), fontSize = 12.sp) },
             selected = false,
             onClick = onNavigateToGuide
         )
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.Person, contentDescription = "Profile") },
-            label = { Text("Profile", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.Profile), fontSize = 12.sp) },
             selected = false,
             onClick = onNavigateToProfile
         )
@@ -1120,21 +1125,21 @@ fun NoSearchResultsBanner(
         ) {
             Icon(
                 imageVector = Icons.Default.SearchOff,
-                contentDescription = "No results",
+                contentDescription = stringResource(R.string.No_results),
                 tint = iconColor,
                 modifier = Modifier.size(40.dp)
             )
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "No matches found",
+                    text = stringResource(R.string.No_matches_found),
                     fontWeight = FontWeight.Bold,
                     color = textColor,
                     fontSize = 16.sp
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "No news found for \"$searchQuery\"",
+                    text = "${stringResource(R.string.No_news_found_for)} \"$searchQuery\"",
                     fontSize = 14.sp,
                     color = secondaryTextColor,
                     lineHeight = 18.sp
@@ -1143,7 +1148,7 @@ fun NoSearchResultsBanner(
             Spacer(Modifier.width(8.dp))
             TextButton(onClick = onClearSearch) {
                 Text(
-                    "Clear",
+                    stringResource(R.string.Clear),
                     color = iconColor,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1151,3 +1156,4 @@ fun NoSearchResultsBanner(
         }
     }
 }
+

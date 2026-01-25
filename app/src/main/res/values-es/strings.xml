@@ -1,7 +1,81 @@
 <resources>
     <string name="app_name">Punto_Neutro</string>
+    <!-- Edit Profile -->
     <string name="profile">Perfil</string>
     <string name="notifications">Notificaciones</string>
     <string name="Edit">Editar </string>
     <string name="Change_Language">Cambiar Idioma</string>
+    <!-- comentario -->
+    <!-- Login -->
+    <string name="Login">Login</string>
+    <string name="Register">Registrarse</string>
+    <string name="Forgot_Password">Olvidar contraseña</string>
+    <string name="Email">Email</string>
+    <string name="Password">Contraseña</string>
+
+
+
+    <!-- News Feed -->
+    <string name="category_economics">Economía</string>
+    <string name="category_politics">Política</string>
+    <string name="category_science">Ciencia</string>
+    <string name="category_health">Salud</string>
+    <string name="category_sports">Deportes</string>
+    <string name="category_climate">Clima</string>
+    <string name="category_business">Negocios</string>
+    <string name="category_conflict">Conflicto</string>
+    <string name="All">Todos</string>
+    <string name="No_results">Sin resultados</string>
+    <string name="No_news_found_for">No hay noticias para </string>
+    <string name="No_matches_found">No hay coincidencias</string>
+    <string name="No_news_available">No hay noticias disponibles</string>
+    <string name="Clear">Limpiar</string>
+    <string name="Read_more">Leer más</string>
+    <string name="days_ago">días atrás</string>
+    <string name="Unknown_source">Fuente desconocida</string>
+    <string name="Author">Autor</string>
+    <string name="Verified_author">Autor verificado</string>
+    <string name="Reliability">Confiabilidad</string>
+    <string name="View_details">Ver detalles</string>
+    <string name="Filter">Filtrar</string>
+    <string name="Clear_search">Limpiar búsqueda</string>
+    <string name="Search">Buscar</string>
+    <string name="Search_news">Buscar noticias...</string>
+    <string name="Clear_filter">Limpiar filtro</string>
+    <string name="Filtered_by">Filtrado por</string>
+    <string name="article">articulo</string>
+    <string name="articles">articulos</string>
+    <string name="found">encontrado</string>
+    <string name="Dismiss">Cerrar</string>
+    <string name="Refreshing_news">Refrescando noticias...</string>
+    <string name="Connection_restored">Conexión restaurada</string>
+    <string name="Submit">Subir</string>
+    <string name="Article_published">Articulo publicado</string>
+    <string name="Cancel">Cancelar</string>
+    <string name="Category">Categoria</string>
+    <string name="Select_Category">Seleccione una Categoria</string>
+    <string name="Add_an_article">Añadir un articulo</string>
+    <string name="Refresh">Refrescar</string>
+    <string name="No_news_in">No hay noticias en</string>
+    <string name="No_news">Sin noticias</string>
+    <string name="Loading_news">Cargando noticias...</string>
+    <string name="Add">Añadir</string>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- News Detail -->
+    <!-- Guide tips -->
+    <!-- Boton navigation bar -->
+    <string name="Home">Home</string>
+    <string name="Profile">Perfil</string>
+    <string name="Guide">Guia</string>
+
 </resources>

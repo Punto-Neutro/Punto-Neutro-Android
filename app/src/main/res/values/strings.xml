@@ -1,7 +1,85 @@
 <resources>
     <string name="app_name">Punto_Neutro</string>
+    <!-- Edit Profile -->
     <string name="profile">Profile</string>
     <string name="notifications">notifications</string>
     <string name="Edit">Edit </string>
     <string name="Change_Language">Change Language</string>
+    <!-- comentario -->
+    <!-- Login -->
+    <string name="Login">Login</string>
+    <string name="Register">Register</string>
+    <string name="Forgot_Password">Forgot Password</string>
+    <string name="Email">Email</string>
+    <string name="Password">Password</string>
+
+
+
+    <!-- News Feed -->
+    <string name="category_economics">Economics</string>
+    <string name="category_politics">Politics</string>
+    <string name="category_science">Science</string>
+    <string name="category_health">Health</string>
+    <string name="category_sports">Sports</string>
+    <string name="category_climate">Climate</string>
+    <string name="category_business">Business</string>
+    <string name="category_conflict">Conflict</string>
+    <string name="All">all</string>
+    <string name="No_results">No results</string>
+    <string name="No_news_found_for">No news found for </string>
+    <string name="No_matches_found">No matches found</string>
+    <string name="No_news_available">No news available</string>
+    <string name="Clear">Clear</string>
+    <string name="Read_more">Read more</string>
+    <string name="days_ago">days ago</string>
+    <string name="Unknown_source">Unknown source</string>
+    <string name="Author">Author</string>
+    <string name="Verified_author">Verified author</string>
+    <string name="Reliability">Reliability</string>
+    <string name="View_details">View details</string>
+    <string name="Filter">Filter</string>
+    <string name="Clear_search">Clear search</string>
+    <string name="Search">Search</string>
+    <string name="Search_news">Search news...</string>
+    <string name="Clear_filter">Clear filter</string>
+    <string name="Filtered_by">Filtered by</string>
+    <string name="article">article</string>
+    <string name="articles">articles</string>
+    <string name="found">found</string>
+    <string name="Dismiss">Dismiss</string>
+    <string name="Refreshing_news">Refresing news...</string>
+    <string name="Connection_restored">Connection restored</string>
+    <string name="Submit">Submit</string>
+    <string name="Article_published">Article published</string>
+    <string name="Cancel">Cancel</string>
+    <string name="Category">Category</string>
+    <string name="Select_Category">Select a Category</string>
+    <string name="Add_an_article">Add an article</string>
+    <string name="Refresh">Refresh</string>
+    <string name="No_news_in">No news in</string>
+    <string name="No_news">No news</string>
+    <string name="Loading_news">Loading news...</string>
+    <string name="Add">Add</string>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- News Detail -->
+    <!-- Guide tips -->
+    <!-- Boton navigation bar -->
+    <string name="Home">Home</string>
+    <string name="Profile">Profile</string>
+    <string name="Guide">Guide</string>
+
+
+
+
+
 </resources>
