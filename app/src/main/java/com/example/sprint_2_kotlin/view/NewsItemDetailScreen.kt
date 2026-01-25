@@ -308,7 +308,7 @@ fun CommentSection(
                 containerColor = buttonColor
             )
         ) {
-            Text(if (isExpanded) "Cancelar" else "Agregar comentario")
+            Text(if (isExpanded) stringResource(R.string.Cancel) else stringResource(R.string.Add_comment))
         }
 
         AnimatedVisibility(isExpanded) {
