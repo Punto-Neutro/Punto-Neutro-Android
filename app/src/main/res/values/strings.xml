@@ -5,7 +5,53 @@
     <string name="notifications">notifications</string>
     <string name="Edit">Edit </string>
     <string name="Change_Language">Change Language</string>
+    <string name="Recent_activity">Recent activity</string>
+    <string name="Achievements">Achievements</string>
+    <string name="Coming_soon">Coming soon...</string>
+    <string name="Confirm_logout">Confirm logout</string>
+
+    <string name="Are_sure_you_want_to_log_out">Are you sure you want to log out? You will need to sign in again next time.</string>
+    <string name="Logout">Logout</string>
+
+    <string name="Settings">Settings</string>
+    <string name="Dark_mode">Dark mode</string>
+    <string name="Enabled">Enabled</string>
+    <string name="Disabled">Disabled</string>
+    <string name="Language">Language</string>
+    <string name="Mores_changes_coming_soon">Mores settings coming soon...</string>
+    <string name="Done">Done</string>
+    <string name="Anonymous_User">Anonymous User</string>
+    <string name="Active_session">Active session</string>
+    <string name="Admin_analytics">Admin analytics</string>
+    <string name="Articles_read">Articles read</string>
+
+    <string name="Comments_submitted">Comments submitted</string>
+    <string name="Bookmarks">Bookmarks</string>
+    <string name="Day_streak">Day streak</string>
+    <string name="Close">Close</string>
+    <string name="Activity">Activity</string>
+
+
+
+
     <!-- comentario -->
+    <!-- BookMark -->
+    <string name="Saved_articles">Saved_article</string>
+    <string name="Clear_all_bookmarks">Clear All Bookmarks?</string>
+    <string name="This_will_remove_all">This will remove all</string>
+    <string name="This_action_cannot_be_undone">saved articles. This action cannot be undone.</string>
+    <string name="Clear_all">Clear All</string>
+    <string name="Offline_mode">Offline Mode</string>
+    <string name="All_synced">All synced</string>
+    <string name="Syncing...">All synced</string>
+    <string name="sync_pending">sync pending</string>
+    <string name="No_bookmarks_yet">No Bookmarks Yet</string>
+    <string name="Save_articles_to_read_them_later">Save articles to read them later</string>
+    <string name="Just_now">Just now</string>
+
+
+
+
     <!-- Login -->
 
     <string name="Login_in_automatically">Logging in automatically...</string>

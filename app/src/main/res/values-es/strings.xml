@@ -5,7 +5,47 @@
     <string name="notifications">Notificaciones</string>
     <string name="Edit">Editar </string>
     <string name="Change_Language">Cambiar Idioma</string>
+
+    <string name="Recent_activity">Actividad reciente</string>
+    <string name="Achievements">Logros</string>
+    <string name="Coming_soon">Proximamente...</string>
+    <string name="Confirm_logout">Confirmar cierre de sesión</string>
+
+    <string name="Are_sure_you_want_to_log_out">¿Estas seguro de cerrar sesión? necesitarás volver a iniciar sesión </string>
+    <string name="Logout">Cerrar sesión</string>
+
+    <string name="Settings">Configuraciones</string>
+    <string name="Dark_mode">Modo oscuro</string>
+    <string name="Enabled">Activado</string>
+    <string name="Disabled">Desactivado</string>
+    <string name="Language">Lenguaje</string>
+    <string name="Mores_changes_coming_soon">Más configuraciones proximamente...</string>
+    <string name="Done">Listo</string>
+    <string name="Anonymous_User">Usuario anónimo</string>
+    <string name="Active_session">Sesión activa</string>
+    <string name="Admin_analytics">Análitica de administrador</string>
+    <string name="Articles_read">Artículos leídos</string>
+    <string name="Comments_submitted">Comentarios subidos </string>
+    <string name="Bookmarks">Guardados</string>
+    <string name="Day_streak">Dias de racha</string>
+    <string name="Close">Cerrar</string>
     <!-- comentario -->
+    <!-- BookMark -->
+    <string name="Saved_articles">Guardado</string>
+    <string name="Clear_all_bookmarks">¿Eliminar todos los guardados?</string>
+    <string name="This_will_remove_all">Esto eliminara todos los </string>
+    <string name="This_action_cannot_be_undone">articulos guardados. Esta acción no se puede deshacer.</string>
+    <string name="Clear_all">Limpiar todos</string>
+    <string name="Offline_mode">Offline Mode</string>
+    <string name="All_synced">Todo sincronizado</string>
+    <string name="Syncing...">Sincronizando...</string>
+    <string name="sync_pending">Sincronización pendiente</string>
+    <string name="No_bookmarks_yet">Sin guardados aun</string>
+    <string name="Save_articles_to_read_them_later">Guarda artículos para leerlos despues</string>
+    <string name="Just_now">Justo ahora</string>
+    <string name="Activity">Actividad</string>
+
+
     <!-- Login -->
     <string name="Login_in_automatically">Iniciando sesión...</string>
     <string name="Login_failed">Inicio de sesión fallido</string>

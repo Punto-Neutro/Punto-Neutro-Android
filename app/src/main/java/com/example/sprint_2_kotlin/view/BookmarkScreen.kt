@@ -12,11 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
+import com.example.sprint_2_kotlin.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +47,7 @@ fun BookmarksScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Bookmarks",
+                        stringResource(R.string.Bookmarks),
                         color = textColor
                     )
                 },
@@ -109,7 +111,7 @@ fun BookmarksScreen(
                     // Header
                     item {
                         Text(
-                            text = "$bookmarkCount Saved Article${if (bookmarkCount != 1) "s" else ""}",
+                            text = "$bookmarkCount ${stringResource(R.string.Saved_articles)}${if (bookmarkCount != 1) "s" else ""}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
@@ -140,8 +142,8 @@ fun BookmarksScreen(
                     tint = Color(0xFFE53935)
                 )
             },
-            title = { Text("Clear All Bookmarks?") },
-            text = { Text("This will remove all $bookmarkCount saved articles. This action cannot be undone.") },
+            title = { Text(stringResource(R.string.Clear_all_bookmarks)) },
+            text = { Text("${stringResource(R.string.This_will_remove_all)} $bookmarkCount ${stringResource(R.string.This_action_cannot_be_undone)}") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -152,12 +154,12 @@ fun BookmarksScreen(
                         containerColor = Color(0xFFE53935)
                     )
                 ) {
-                    Text("Clear All")
+                    Text(stringResource(R.string.Clear_all))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.Cancel))
                 }
             }
         )

@@ -54,7 +54,7 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel() // Add AuthViewModel
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Activity", "Achievements")
+    val tabs = listOf(stringResource(R.string.Activity), stringResource(R.string.Achievements))
     val coroutineScope = rememberCoroutineScope()
 
     // Admin panel states
@@ -212,31 +212,34 @@ fun ProfileScreen(
                     // Activity Tab
                     item {
                         Text(
-                            text = "Recent Activity",
+                            text = stringResource(R.string.Recent_activity),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
                         )
                         Spacer(Modifier.height(12.dp))
+
+                        Text(
+                            text =stringResource(R.string.Coming_soon),
+                            fontSize = 14.sp,
+                            color = secondaryTextColor
+                        )
                     }
 
-                    items(getRecentActivities()) { activity ->
-                        ActivityItem(activity = activity, isDarkMode = isDarkMode)
-                        Spacer(Modifier.height(8.dp))
-                    }
+
                 }
                 1 -> {
                     // Achievements Tab
                     item {
                         Text(
-                            text = "Achievements",
+                            text = stringResource(R.string.Achievements),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            text = "Coming soon...",
+                            text = stringResource(R.string.Coming_soon),
                             fontSize = 14.sp,
                             color = secondaryTextColor
                         )
@@ -261,14 +264,14 @@ fun ProfileScreen(
             },
             title = {
                 Text(
-                    text = "Confirm Logout",
+                    text = stringResource(R.string.Confirm_logout),
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to log out? You'll need to sign in again next time.",
+                    text = stringResource(R.string.Are_sure_you_want_to_log_out),
                     color = secondaryTextColor
                 )
             },
@@ -287,14 +290,14 @@ fun ProfileScreen(
                         containerColor = Color(0xFFE53935)
                     )
                 ) {
-                    Text("Logout", color = Color.White)
+                    Text(stringResource(R.string.Logout), color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showLogoutConfirmation = false }
                 ) {
-                    Text("Cancel", color = textColor)
+                    Text( stringResource(R.string.Cancel), color = textColor)
                 }
             }
         )
@@ -370,7 +373,7 @@ fun EditProfileDialog(
         },
         title = {
             Text(
-                text = "Settings",
+                text = stringResource(R.string.Settings),
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
@@ -395,13 +398,13 @@ fun EditProfileDialog(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Dark Mode",
+                                text = stringResource(R.string.Dark_mode),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = textColor
                             )
                             Text(
-                                text = if (isDarkMode) "Enabled" else "Disabled",
+                                text = if (isDarkMode) stringResource(R.string.Enabled) else stringResource(R.string.Disabled),
                                 fontSize = 12.sp,
                                 color = secondaryTextColor
                             )
@@ -495,7 +498,7 @@ fun EditProfileDialog(
 
                 // Placeholder para futuras opciones
                 Text(
-                    text = "More settings coming soon...",
+                    text = stringResource(R.string.Mores_changes_coming_soon),
                     fontSize = 14.sp,
                     color = secondaryTextColor,
                     modifier = Modifier.padding(vertical = 8.dp)
@@ -507,7 +510,7 @@ fun EditProfileDialog(
                 onClick = onDismiss // This simply closes the dialog
             ) {
                 Text(
-                    text = "Done",
+                    text = stringResource(R.string.Done) ,
                     color = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A),
                     fontWeight = FontWeight.Bold
                 )
@@ -557,7 +560,7 @@ fun UserProfileCard(
             Spacer(Modifier.height(12.dp))
 
             Text(
-                text = "Anonymous User",
+                text = stringResource(R.string.Anonymous_User),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor
@@ -566,27 +569,12 @@ fun UserProfileCard(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = "Active session",
+                text = stringResource(R.string.Active_session),
                 fontSize = 13.sp,
                 color = secondaryTextColor
             )
 
             Spacer(Modifier.height(12.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Badge(
-                    icon = Icons.Default.Verified,
-                    text = "Trusted Verifier",
-                    backgroundColor = Color(0xFFE3F2FD),
-                    textColor = Color(0xFF1976D2)
-                )
-                Badge(
-                    icon = Icons.Default.Star,
-                    text = "Level 3",
-                    backgroundColor = Color(0xFF1A1A1A),
-                    textColor = Color.White
-                )
-            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -623,7 +611,7 @@ fun UserProfileCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("🧪 Admin Analytics", fontSize = 14.sp)
+                Text("🧪 ${stringResource(R.string.Admin_analytics)}", fontSize = 14.sp)
             }
         }
     }
@@ -677,7 +665,7 @@ fun StatisticsGrid(
             StatCard(
                 icon = Icons.Default.Visibility,
                 value = "$readCount",
-                label = "Articles read",
+                label = stringResource(R.string.Articles_read),
                 iconColor = Color(0xFF2196F3),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f),
@@ -686,7 +674,7 @@ fun StatisticsGrid(
             StatCard(
                 icon = Icons.Default.Flag,
                 value = "12",
-                label = "Reports submitted",
+                label = stringResource(R.string.Comments_submitted),
                 iconColor = Color(0xFFE53935),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f)
@@ -699,7 +687,7 @@ fun StatisticsGrid(
             StatCard(
                 icon = Icons.Default.Bookmark,
                 value = "$bookmarkCount",
-                label = "Bookmarks",
+                label = stringResource(R.string.Bookmarks),
                 iconColor = Color(0xFFFFA726),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f),
@@ -708,7 +696,7 @@ fun StatisticsGrid(
             StatCard(
                 icon = Icons.Default.TrendingUp,
                 value = "28",
-                label = "Day streak",
+                label = stringResource(R.string.Day_streak),
                 iconColor = Color(0xFF9C27B0),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f)
@@ -865,19 +853,19 @@ fun ProfileBottomNavigationBar(
     ) {
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.Home, contentDescription = "Home") },
-            label = { Text("Home", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.Home), fontSize = 12.sp) },
             selected = false,
             onClick = onNavigateToHome
         )
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.MenuBook, contentDescription = "Guide") },
-            label = { Text("Guide", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.Guide), fontSize = 12.sp) },
             selected = false,
             onClick = onNavigateToGuide
         )
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
-            label = { Text("Profile", fontSize = 12.sp) },
+            label = { Text(stringResource(R.string.profile), fontSize = 12.sp) },
             selected = true,
             onClick = { /* Already on Profile */ }
         )
@@ -1015,7 +1003,7 @@ fun AdminAnalyticsDialog(
                     containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
                 )
             ) {
-                Text("Close")
+                Text(stringResource(R.string.Close))
             }
         }
     )

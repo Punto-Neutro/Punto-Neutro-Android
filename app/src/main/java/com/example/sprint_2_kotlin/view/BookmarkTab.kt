@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,8 @@ import com.example.sprint_2_kotlin.model.data.BookmarkEntity
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.sprint_2_kotlin.R
+import utils.getTranslatedCategoryName
 
 /**
  * Bookmarks tab content for ProfileScreen
@@ -76,7 +79,7 @@ fun BookmarksTabContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "$bookmarkCount Saved Article${if (bookmarkCount != 1) "s" else ""}",
+                            text = "$bookmarkCount ${stringResource(R.string.Saved_articles)}${if (bookmarkCount != 1) "s" else ""}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
@@ -84,7 +87,7 @@ fun BookmarksTabContent(
 
                         TextButton(onClick = { showClearDialog = true }) {
                             Text(
-                                "Clear All",
+                                stringResource(R.string.Clear_all),
                                 color = Color(0xFFE53935)
                             )
                         }
@@ -126,8 +129,8 @@ fun BookmarksTabContent(
                     tint = Color(0xFFE53935)
                 )
             },
-            title = { Text("Clear All Bookmarks?") },
-            text = { Text("This will remove all $bookmarkCount saved articles. This action cannot be undone.") },
+            title = { Text(stringResource(R.string.Clear_all_bookmarks)) },
+            text = { Text("${stringResource(R.string.This_will_remove_all)} $bookmarkCount ${stringResource(R.string.This_action_cannot_be_undone)}") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -138,12 +141,12 @@ fun BookmarksTabContent(
                         containerColor = Color(0xFFE53935)
                     )
                 ) {
-                    Text("Clear All")
+                    Text(stringResource(R.string.Clear_all))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.Cancel))
                 }
             }
         )
@@ -186,9 +189,9 @@ fun SyncStatusBanner(
                 Column {
                     Text(
                         text = when {
-                            !isConnected -> "Offline Mode"
-                            pendingSyncCount > 0 -> "$pendingSyncCount pending sync"
-                            else -> "All synced"
+                            !isConnected -> stringResource(R.string.Offline_mode)
+                            pendingSyncCount > 0 -> "$pendingSyncCount ${stringResource(R.string.sync_pending)}"
+                            else -> stringResource(R.string.All_synced)
                         },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -196,7 +199,7 @@ fun SyncStatusBanner(
                     )
                     if (syncStatus is BookmarkViewModel.SyncStatus.Syncing) {
                         Text(
-                            text = "Syncing...",
+                            text = stringResource(R.string.Syncing___),
                             fontSize = 12.sp,
                             color = bannerColor.copy(alpha = 0.7f)
                         )
@@ -287,7 +290,7 @@ fun BookmarkCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = getCategoryName(bookmark.categoryId),
+                        text = getTranslatedCategoryName(getCategoryName(bookmark.categoryId)),
                         fontSize = 11.sp,
                         color = getCategoryColor(bookmark.categoryId),
                         fontWeight = FontWeight.Medium
@@ -325,14 +328,14 @@ fun EmptyBookmarksState(isDarkMode: Boolean) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "No Bookmarks Yet",
+                text = stringResource(R.string.No_bookmarks_yet),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Save articles to read them later",
+                text = stringResource(R.string.Save_articles_to_read_them_later),
                 fontSize = 14.sp,
                 color = secondaryTextColor
             )
@@ -374,10 +377,10 @@ private fun getRelativeTime(timestamp: Long): String {
     val diff = now - timestamp
 
     return when {
-        diff < 60_000 -> "Just now"
-        diff < 3600_000 -> "${diff / 60_000}m ago"
-        diff < 86400_000 -> "${diff / 3600_000}h ago"
-        diff < 604800_000 -> "${diff / 86400_000}d ago"
+        diff < 60_000 -> "${R.string.Just_now}"
+        diff < 3600_000 -> "${diff / 60_000}m"
+        diff < 86400_000 -> "${diff / 3600_000}h"
+        diff < 604800_000 -> "${diff / 86400_000}d"
         else -> {
             try {
                 SimpleDateFormat("MMM dd", Locale.getDefault()).format(Date(timestamp))
