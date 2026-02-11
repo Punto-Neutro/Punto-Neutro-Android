@@ -142,6 +142,49 @@
     <string name="Comment">Comment</string>
     <string name="Value">Value</string>
     <!-- Guide tips -->
+    <string name="Guide_to_Identify_Fake_News">Guide to Identify Fake News</string>
+    <string name="Learn_to_detect_misinformation_and_manipulated_content">Learn to detect misinformation and manipulated content</string>
+    <string name="Examine_the_source">Examine the source</string>
+    <string name="Verify_if_the_website_is_known_and_reliable._Check_the_About_section_to_learn_more_about_the_organization.">Verify if the website is known and reliable. Check the "About" section to learn more about the organization.</string>
+    <string name="Basic">Basic</string>
+    <string name="Intermediate">Intermediate</string>
+    <string name="Advanced">Advanced</string>
+    <string name="Search_multiple_sources">Search multiple sources</string>
+    <string name="Real_">Real news are usually reported by multiple reliable media outlets. If it only appears on one site, be suspicious.</string>
+    <string name="Verify_the_author">Verify the author</string>
+    <string name="Look_up_info">Look up information about the journalist or author. Professionals usually have verifiable online presence.</string>
+    <string name="Beware_of_sensationalist_headlines">Beware of sensationalist headlines</string>
+    <string name="Overly_emotional_titles_or_those_with_ALL_CAPS_are_usually_indicators_of_questionable_content.">Overly emotional titles or those with ALL CAPS are usually indicators of questionable content.</string>
+    <string name="Check_the_dates">Check the dates</string>
+    <string name="Make_sure_the_information_">Make sure the information is current. Sometimes old news are recycled as if there were recent</string>
+    <string name="Use_verification_tools">Use verification tools</string>
+    <string name="Use_fact_checking_sites_">Use fact-checking sites like Snopes, PolitiFact, or Punto Neutro.</string>
+    <string name="Warning_Signs">Warning Signs</string>
+    <string name="Strange_URLs_or_many_spelling_errors">Strange URLs or many spelling errors</string>
+    <string name="Images_that_dont_match_the_text">Images that do not match the text</string>
+    <string name="Missing_date_or_clearly_identified_author">Missing date or clearly identified author</string>
+    <string name="Verification_Process">Verification Process</string>
+    <string name="First_reading">First reading</string>
+    <string name="Read_the_title_and_first_paragraph.">Read the title and first paragraph. Does it seem credible to you?</string>
+    <string name="Verify_the_source">Verify the source</string>
+    <string name="Research_who_published_the_information_and_their_reputation.">Research who published the information and their reputation.</string>
+    <string name="Look_for_corroboration">Look for corroboration</string>
+    <string name="Search_for_the_same_news_in_other_reliable_media_outlets.">Search for the same news in other reliable media outlets.</string>
+    <string name="Analyze_the_images">Analyze the images</string>
+    <string name="Use_reverse_image_search_to_verify_their_origin.">Use reverse image search to verify their origin.</string>
+    <string name="Consult_experts">Consult experts</string>
+    <string name="Look_for_opinions_from_specialists_on_the_topic_covered.">Look for opinions from specialists on the topic covered.</string>
+    <string name="Recommended_Tools">Recommended Tools</string>
+    <string name="Punto_Neutro_AI">Punto Neutro AI (coming in the future)</string>
+    <string name="Reverse_Search">Reverse Search</string>
+    <string name="Verify_the_origin_and_authenticity_of_images">Verify the origin and authenticity of images</string>
+
+
+
+
+
+
+
     <!-- Boton navigation bar -->
     <string name="Home">Home</string>
     <string name="Profile">Profile</string>

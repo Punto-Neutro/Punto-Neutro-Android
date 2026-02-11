@@ -136,6 +136,44 @@
 
 
     <!-- Guide tips -->
+    <string name="Guide_to_Identify_Fake_News">Guia para identificar noticias falsas</string>
+    <string name="Learn_to_detect_misinformation_and_manipulated_content">Aprende a detectar información falsa y manipulada</string>
+    <string name="Examine_the_source">Examina la fuente</string>
+    <string name="Verify_if_the_website_is_known_and_reliable._Check_the_About_section_to_learn_more_about_the_organization.">Verifica si el sitio web es conocido y confiable. Revisa la sección con sus datos para obtener más información sobre la organización.</string>
+    <string name="Basic">Basico</string>
+    <string name="Intermediate">Intermedio</string>
+    <string name="Advanced">Avanzado</string>
+    <string name="Search_multiple_sources">Busca múltiples fuentes</string>
+    <string name="Real_">Las noticias reales suelen estar reportadas en multiples medios confiables. Si solo aparece en un sitio, es sospechoso.</string>
+    <string name="Verify_the_author">Verifica autores</string>
+    <string name="Look_up_info">Busca información sobre los periodistas o autores. Los profesionales usualmente tienen presencia en línea verificable.</string>
+    <string name="Beware_of_sensationalist_headlines">Ten cuidado con los titulos sensacionalistas</string>
+    <string name="Overly_emotional_titles_or_those_with_ALL_CAPS_are_usually_indicators_of_questionable_content.">Titulos abrumadoramente sensacionalistas o aquellos con todas sus letras en MAYÚSCULA. Son indicadores de contenido cuestionable</string>
+    <string name="Check_the_dates">Revisa las fechas</string>
+    <string name="Make_sure_the_information_">Asegurate de que la informacion es actual. Aveces las noticias viejas son recicladas como recientes. </string>
+    <string name="Use_verification_tools">Usa herramientas de verificación </string>
+    <string name="Use_fact_checking_sites_">Usa sitios de verificación de hechos como Snopes, PolitiFact, or Punto Neutro.</string>
+    <string name="Warning_Signs">Signos de alerta</string>
+    <string name="Strange_URLs_or_many_spelling_errors">Enlaces extraños o muchos errores de ortografia</string>
+    <string name="Images_that_dont_match_the_text">Imágenes que no coinciden con el texto</string>
+    <string name="Missing_date_or_clearly_identified_author">Fecha o autor claramente identificado ausentes</string>
+    <string name="Verification_Process">Proceso de verificación</string>
+    <string name="First_reading">Primera lectura</string>
+    <string name="Read_the_title_and_first_paragraph.">Lee el titulo y el primer párrafo. ¿Parece credible para ti?</string>
+    <string name="Verify_the_source">Verifica la fuente</string>
+    <string name="Research_who_published_the_information_and_their_reputation.">Investiga quien publicó la información y su reputación</string>
+    <string name="Look_for_corroboration">Busca una corroboración</string>
+    <string name="Search_for_the_same_news_in_other_reliable_media_outlets.">Averigua por la misma noticia en otros medios confiables</string>
+    <string name="Analyze_the_images">Analiza las imágenes</string>
+    <string name="Use_reverse_image_search_to_verify_their_origin.">Usa búsqueda invertida para verificar su origen.</string>
+    <string name="Consult_experts">Consulta expertos</string>
+    <string name="Look_for_opinions_from_specialists_on_the_topic_covered.">Busca opiniones de especialistas en el tema cubierto.</string>
+    <string name="Recommended_Tools">Herramientas recomendadas</string>
+    <string name="Punto_Neutro_AI">Punto Neutro AI (Viene en el futuro)</string>
+    <string name="Reverse_Search">Búsqueda inversa</string>
+    <string name="Verify_the_origin_and_authenticity_of_images">Verifica el origen y la autenticidad de las imágenes</string>
+
+
     <!-- Boton navigation bar -->
     <string name="Home">Home</string>
     <string name="Profile">Perfil</string>
