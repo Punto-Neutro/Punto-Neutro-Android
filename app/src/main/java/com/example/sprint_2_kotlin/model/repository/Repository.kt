@@ -14,6 +14,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -128,6 +129,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     suspend fun getNewsItems(pageSize: Int = 20, startRow: Int = 0): List<NewsItem> {
         val response = client.postgrest["news_items"].select {
+            order("added_to_app_date", order = Order.DESCENDING)
             range(startRow.toLong(), (startRow + pageSize - 1).toLong())
         }
         return response.decodeList()
