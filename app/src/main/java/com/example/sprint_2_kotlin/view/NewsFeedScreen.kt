@@ -7,9 +7,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.forEach
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +48,8 @@ import utils.NetworkMonitor
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import androidx.compose.ui.platform.LocalContext
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
@@ -54,7 +60,9 @@ fun NewsFeedScreen(
     viewModel: NewsFeedViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
-    val newsItems by viewModel.newsItems.collectAsState()
+    val newsItems: List<NewsItem> by viewModel.newsItems.collectAsState()
+    val lazyListState = rememberLazyListState() // Add this state
+
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val cacheStatus by viewModel.cacheStatus.collectAsState()
@@ -66,6 +74,18 @@ fun NewsFeedScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
+
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
+                ?: return@derivedStateOf false
+
+            // Load more when user is 5 items away from the bottom
+            lastVisibleItem.index >= lazyListState.layoutInfo.totalItemsCount - 5
+        }
+    }
+
+
 
     if (showDialog) {
         FeedbackDialog(
@@ -85,9 +105,33 @@ fun NewsFeedScreen(
     val context = LocalContext.current
     val networkMonitor = remember { NetworkMonitor(context) }
 
+
+
     LaunchedEffect(Unit) {
         viewModel.startNetworkObserver(networkMonitor)
+
     }
+
+    LaunchedEffect(newsItems.isEmpty() && !isLoading && !isRefreshing) {
+        if (newsItems.isEmpty() && !isLoading && !isRefreshing) {
+            viewModel.loadNewsItems(false)
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && !newsItems.isEmpty()  ) {
+            viewModel.loadNextPage()
+        }
+    }
+
+
+
+
+
+
+
+
+
 
     Scaffold(
         floatingActionButton = {
@@ -107,195 +151,92 @@ fun NewsFeedScreen(
                 onNavigateToProfile = onNavigateToProfile
             )
         }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            SwipeRefresh(
-                state = rememberSwipeRefreshState(isRefreshing),
-                onRefresh = { viewModel.refreshNewsFeed() }
+    ) // NewsFeedScreen.kt - Update your paddingValues block
+
+ { paddingValues ->
+    Box(modifier = Modifier.padding(paddingValues)) {
+        SwipeRefresh(state = rememberSwipeRefreshState(isRefreshing),
+            onRefresh = { viewModel.refreshNewsFeed() }
+        ) {
+            // REMOVE: The if (isLoading && newsItems.isEmpty()) check from here
+
+            LazyColumn(
+                state = lazyListState,
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(backgroundColor)
             ) {
-                if (isLoading && newsItems.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(backgroundColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                color = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
-                            )
-                            Text(
-                                "Loading news...",
-                                color = secondaryTextColor,
-                                fontSize = 14.sp
-                            )
-                        }
+                // 1. Header items (Header, Search, Tabs)
+                item {
+                    Column(modifier = Modifier.fillMaxWidth().background(surfaceColor)) {
+                        FeedHeader(isDarkMode = isDarkMode, cacheStatus = cacheStatus)
+                        SearchBar(isDarkMode = isDarkMode, query = searchQuery, onQueryChange = { viewModel.updateSearchQuery(it) })
+                        CategoryTabsFromSupabase(
+                            isDarkMode = isDarkMode,
+                            categories = categories,
+                            selectedCategory = selectedCategory,
+                            onCategorySelected = { viewModel.selectCategory(it) },
+                            onClearFilter = { viewModel.clearCategoryFilter() }
+                        )
                     }
-                } else if (newsItems.isEmpty() && !isLoading && searchQuery.isBlank()) {
-                    // update: Solo mostrar "No news" si NO hay búsqueda activa
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(backgroundColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Info,
-                                contentDescription = "No news",
-                                modifier = Modifier.size(64.dp),
-                                tint = secondaryTextColor
-                            )
-                            Text(
-                                text = if (selectedCategory != null) {
-                                    "No news in ${selectedCategory?.name} category"
-                                } else {
-                                    "No news available"
-                                },
-                                fontSize = 16.sp,
-                                color = secondaryTextColor
-                            )
-                            Button(
-                                onClick = { viewModel.refreshNewsFeed() },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
-                                )
-                            ) {
-                                Icon(Icons.Default.Refresh, "Refresh")
-                                Spacer(Modifier.width(8.dp))
-                                Text("Refresh")
-                            }
-                        }
-                    }
-                }else {
-                    LazyColumn(
-                        modifier = modifier
-                            .fillMaxSize()
-                            .background(backgroundColor)
-                    ) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(surfaceColor)
-                            ) {
-                                FeedHeader(
-                                    isDarkMode = isDarkMode,
-                                    cacheStatus = cacheStatus
-                                )
-                                SearchBar(
-                                    isDarkMode = isDarkMode,
-                                    query = searchQuery,
-                                    onQueryChange = { viewModel.updateSearchQuery(it) }
-                                )
-                                CategoryTabsFromSupabase(
-                                    isDarkMode = isDarkMode,
-                                    categories = categories,
-                                    selectedCategory = selectedCategory,
-                                    onCategorySelected = { category ->
-                                        viewModel.selectCategory(category)
-                                    },
-                                    onClearFilter = {
-                                        viewModel.clearCategoryFilter()
-                                    }
-                                )
-                            }
-                        }
+                }
 
-// Update: Banner de "No matches" cuando búsqueda no tiene resultados
+                // 2. INITIAL LOADING STATE (Now inside the list)
+                // This fills the screen but KEEPS the LazyColumn alive in the UI tree
+                // NewsFeedScreen.kt inside LazyColumn
+
+                when {
+                    // ONLY show the fullscreen loader if we have NO items AND we are loading for the first time.
+                    // If newsItems has data, we NEVER show this Box, so the list stays in the UI tree.
+                    isLoading && newsItems.isEmpty() -> {
+                        item {
+                            Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A))
+                            }
+                        }
+                    }
+
+                    // Only show "No News" if we are NOT loading and we actually have nothing.
+
+
+                    else -> {
                         if (noSearchResults) {
-                            item {
-                                NoSearchResultsBanner(
-                                    isDarkMode = isDarkMode,
-                                    searchQuery = searchQuery,
-                                    onClearSearch = { viewModel.clearSearch() }
-                                )
-                            }
+                            item { NoSearchResultsBanner(isDarkMode, searchQuery) { viewModel.clearSearch() } }
                         }
 
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                MisinformationAlert(isDarkMode = isDarkMode)
-                            }
-                        }
+                        item { MisinformationAlert(isDarkMode) }
 
-                        if (selectedCategory != null) {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    FilterInfoCard(
-                                        isDarkMode = isDarkMode,
-                                        categoryName = selectedCategory!!.name,
-                                        itemCount = newsItems.size,
-                                        onClearFilter = { viewModel.clearCategoryFilter() }
-                                    )
-                                }
-                            }
-                        }
-
+                        // This is the core content. As long as this is rendered, scroll position is safe.
                         items(
                             items = newsItems,
                             key = { it.news_item_id },
-                            contentType = { "NewsCard" }  // MicroOpti: Define el tipo de contenido
+                            contentType = { "NewsCard" }
                         ) { item ->
-                            Column(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                NewsCard(
-                                    isDarkMode = isDarkMode,
-                                    item = item,
-                                    categories = categories,
-                                    onClick = { onNewsItemClick(item.news_item_id) }
-                                )
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                NewsCard(isDarkMode, item, categories) { onNewsItemClick(item.news_item_id) }
                             }
                         }
 
-                        if (newsItems.isNotEmpty()) {
+                        // Pagination loader at the bottom
+                        if (isLoading && newsItems.isNotEmpty()) {
                             item {
-                                Text(
-                                    text = "📦 Using cached data for faster loading",
-                                    fontSize = 12.sp,
-                                    color = if (isDarkMode) Color(0xFF808080) else Color(0xFF999999),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 16.dp)
-                                )
+                                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
                             }
                         }
                     }
                 }
             }
-
-            AnimatedVisibility(
-                visible = connectionRestored,
-                enter = slideInVertically(initialOffsetY = { -it }),
-                exit = slideOutVertically(targetOffsetY = { -it }),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                ConnectionRestoredBanner(
-                    onDismiss = { viewModel.dismissConnectionRestored() }
-                )
-            }
         }
     }
 }
 
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: NewsFeedViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), onDismiss: () -> Unit) {
+fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: NewsFeedViewModel = viewModel(), onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var URL by remember { mutableStateOf("") }
     var Author_type by remember{ mutableStateOf("") }
@@ -322,7 +263,8 @@ fun FeedbackDialog(isDarkMode: Boolean,categories: List<Category>,viewModel: New
         ) {
             Column(
                 modifier = Modifier
-                    .padding(16.dp).verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -1017,7 +959,7 @@ fun NewsCard(
 @Composable
 fun IconWithText(
     isDarkMode: Boolean = false,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String
 ) {
     val iconColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
