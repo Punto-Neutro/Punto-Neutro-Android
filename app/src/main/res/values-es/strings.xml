@@ -1,0 +1,182 @@
+<resources>
+    <string name="app_name">Punto_Neutro</string>
+    <!-- Edit Profile -->
+    <string name="profile">Perfil</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="Edit">Editar </string>
+    <string name="Change_Language">Cambiar Idioma</string>
+
+    <string name="Recent_activity">Actividad reciente</string>
+    <string name="Achievements">Logros</string>
+    <string name="Coming_soon">Proximamente...</string>
+    <string name="Confirm_logout">Confirmar cierre de sesión</string>
+
+    <string name="Are_sure_you_want_to_log_out">¿Estas seguro de cerrar sesión? necesitarás volver a iniciar sesión </string>
+    <string name="Logout">Cerrar sesión</string>
+
+    <string name="Settings">Configuraciones</string>
+    <string name="Dark_mode">Modo oscuro</string>
+    <string name="Enabled">Activado</string>
+    <string name="Disabled">Desactivado</string>
+    <string name="Language">Lenguaje</string>
+    <string name="Mores_changes_coming_soon">Más configuraciones proximamente...</string>
+    <string name="Done">Listo</string>
+    <string name="Anonymous_User">Usuario anónimo</string>
+    <string name="Active_session">Sesión activa</string>
+    <string name="Admin_analytics">Análitica de administrador</string>
+    <string name="Articles_read">Artículos leídos</string>
+    <string name="Comments_submitted">Comentarios subidos </string>
+    <string name="Bookmarks">Guardados</string>
+    <string name="Day_streak">Dias de racha</string>
+    <string name="Close">Cerrar</string>
+    <!-- comentario -->
+    <!-- BookMark -->
+    <string name="Saved_articles">Guardado</string>
+    <string name="Clear_all_bookmarks">¿Eliminar todos los guardados?</string>
+    <string name="This_will_remove_all">Esto eliminara todos los </string>
+    <string name="This_action_cannot_be_undone">articulos guardados. Esta acción no se puede deshacer.</string>
+    <string name="Clear_all">Limpiar todos</string>
+    <string name="Offline_mode">Offline Mode</string>
+    <string name="All_synced">Todo sincronizado</string>
+    <string name="Syncing...">Sincronizando...</string>
+    <string name="sync_pending">Sincronización pendiente</string>
+    <string name="No_bookmarks_yet">Sin guardados aun</string>
+    <string name="Save_articles_to_read_them_later">Guarda artículos para leerlos despues</string>
+    <string name="Just_now">Justo ahora</string>
+    <string name="Activity">Actividad</string>
+
+
+    <!-- Login -->
+    <string name="Login_in_automatically">Iniciando sesión...</string>
+    <string name="Login_failed">Inicio de sesión fallido</string>
+    <string name="Fighting_misinformation">Combatiendo la información falsa</string>
+    <string name="A_collaborative_platform_where...">Una plataforma colaborativa donde la comunidad verifica noticias en tiempo real para combatir la información falsa.</string>
+    <string name="Register_failed">Registro fallido</string>
+    <string name="Source_credibility">Análisis de credibilidad de la fuente</string>
+    <string name="Realtime_collaborative_verification">Verificación colaborativa en tiempo real</string>
+    <string name="Network_of_verified_users">Red de usuarios verificados</string>
+    <string name="Access_your_account">Accede a tu cuenta</string>
+    <string name="Enter_your_credentials_to_continue">Ingresa tus credenciales para contiunar</string>
+    <string name="Sign_in">Inicia sesión</string>
+    <string name="With_fingerprint">con huella</string>
+    <string name="Register">Registrarse</string>
+    <string name="You.example.com">tu@ejemplo.com</string>
+    <string name="Forgot_Password">¿Olvidaste tu contraseña?</string>
+    <string name="Email">Correo</string>
+    <string name="Password">Contraseña</string>
+
+
+    <!-- News Feed -->
+    <string name="category_economics">Economía</string>
+    <string name="category_politics">Política</string>
+    <string name="category_science">Ciencia</string>
+    <string name="category_health">Salud</string>
+    <string name="category_sports">Deportes</string>
+    <string name="category_climate">Clima</string>
+    <string name="category_business">Negocios</string>
+    <string name="category_conflict">Conflicto</string>
+    <string name="All">Todos</string>
+    <string name="No_results">Sin resultados</string>
+    <string name="No_news_found_for">No hay noticias para </string>
+    <string name="No_matches_found">No hay coincidencias</string>
+    <string name="No_news_available">No hay noticias disponibles</string>
+    <string name="Clear">Limpiar</string>
+    <string name="Read_more">Leer más</string>
+    <string name="days_ago">días atrás</string>
+    <string name="Unknown_source">Fuente desconocida</string>
+    <string name="Author">Autor</string>
+    <string name="Verified_author">Autor verificado</string>
+    <string name="Reliability">Confiabilidad</string>
+    <string name="View_details">Ver detalles</string>
+    <string name="Filter">Filtrar</string>
+    <string name="Clear_search">Limpiar búsqueda</string>
+    <string name="Search">Buscar</string>
+    <string name="Search_news">Buscar noticias...</string>
+    <string name="Clear_filter">Limpiar filtro</string>
+    <string name="Filtered_by">Filtrado por</string>
+    <string name="article">articulo</string>
+    <string name="articles">articulos</string>
+    <string name="found">encontrado</string>
+    <string name="Dismiss">Cerrar</string>
+    <string name="Refreshing_news">Refrescando noticias...</string>
+    <string name="Connection_restored">Conexión restaurada</string>
+    <string name="Submit">Subir</string>
+    <string name="Article_published">Articulo publicado</string>
+    <string name="Cancel">Cancelar</string>
+    <string name="Category">Categoria</string>
+    <string name="Select_Category">Seleccione una Categoria</string>
+    <string name="Add_an_article">Añadir un articulo</string>
+    <string name="Refresh">Refrescar</string>
+    <string name="No_news_in">No hay noticias en</string>
+    <string name="No_news">Sin noticias</string>
+    <string name="Loading_news">Cargando noticias...</string>
+    <string name="Add">Añadir</string>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- News Detail -->
+    <string name="By">Por</string>
+    <string name="at">en</string>
+    <string name="Published">Publicado</string>
+    <string name="Source">Fuente</string>
+    <string name="total_ratings">calificaciones</string>
+    <string name="Add_comment">Agregar un comentario</string>
+    <string name="Ratings_and_comments">Calificaciones y comentarios</string>
+    <string name="News_Details">Detalles de la noticia</string>
+    <string name="Comment">Comentario</string>
+    <string name="Value">Valor</string>
+
+
+    <!-- Guide tips -->
+    <string name="Guide_to_Identify_Fake_News">Guia para identificar noticias falsas</string>
+    <string name="Learn_to_detect_misinformation_and_manipulated_content">Aprende a detectar información falsa y manipulada</string>
+    <string name="Examine_the_source">Examina la fuente</string>
+    <string name="Verify_if_the_website_is_known_and_reliable._Check_the_About_section_to_learn_more_about_the_organization.">Verifica si el sitio web es conocido y confiable. Revisa la sección con sus datos para obtener más información sobre la organización.</string>
+    <string name="Basic">Basico</string>
+    <string name="Intermediate">Intermedio</string>
+    <string name="Advanced">Avanzado</string>
+    <string name="Search_multiple_sources">Busca múltiples fuentes</string>
+    <string name="Real_">Las noticias reales suelen estar reportadas en multiples medios confiables. Si solo aparece en un sitio, es sospechoso.</string>
+    <string name="Verify_the_author">Verifica autores</string>
+    <string name="Look_up_info">Busca información sobre los periodistas o autores. Los profesionales usualmente tienen presencia en línea verificable.</string>
+    <string name="Beware_of_sensationalist_headlines">Ten cuidado con los titulos sensacionalistas</string>
+    <string name="Overly_emotional_titles_or_those_with_ALL_CAPS_are_usually_indicators_of_questionable_content.">Titulos abrumadoramente sensacionalistas o aquellos con todas sus letras en MAYÚSCULA. Son indicadores de contenido cuestionable</string>
+    <string name="Check_the_dates">Revisa las fechas</string>
+    <string name="Make_sure_the_information_">Asegurate de que la informacion es actual. Aveces las noticias viejas son recicladas como recientes. </string>
+    <string name="Use_verification_tools">Usa herramientas de verificación </string>
+    <string name="Use_fact_checking_sites_">Usa sitios de verificación de hechos como Snopes, PolitiFact, or Punto Neutro.</string>
+    <string name="Warning_Signs">Signos de alerta</string>
+    <string name="Strange_URLs_or_many_spelling_errors">Enlaces extraños o muchos errores de ortografia</string>
+    <string name="Images_that_dont_match_the_text">Imágenes que no coinciden con el texto</string>
+    <string name="Missing_date_or_clearly_identified_author">Fecha o autor claramente identificado ausentes</string>
+    <string name="Verification_Process">Proceso de verificación</string>
+    <string name="First_reading">Primera lectura</string>
+    <string name="Read_the_title_and_first_paragraph.">Lee el titulo y el primer párrafo. ¿Parece credible para ti?</string>
+    <string name="Verify_the_source">Verifica la fuente</string>
+    <string name="Research_who_published_the_information_and_their_reputation.">Investiga quien publicó la información y su reputación</string>
+    <string name="Look_for_corroboration">Busca una corroboración</string>
+    <string name="Search_for_the_same_news_in_other_reliable_media_outlets.">Averigua por la misma noticia en otros medios confiables</string>
+    <string name="Analyze_the_images">Analiza las imágenes</string>
+    <string name="Use_reverse_image_search_to_verify_their_origin.">Usa búsqueda invertida para verificar su origen.</string>
+    <string name="Consult_experts">Consulta expertos</string>
+    <string name="Look_for_opinions_from_specialists_on_the_topic_covered.">Busca opiniones de especialistas en el tema cubierto.</string>
+    <string name="Recommended_Tools">Herramientas recomendadas</string>
+    <string name="Punto_Neutro_AI">Punto Neutro AI (Viene en el futuro)</string>
+    <string name="Reverse_Search">Búsqueda inversa</string>
+    <string name="Verify_the_origin_and_authenticity_of_images">Verifica el origen y la autenticidad de las imágenes</string>
+
+
+    <!-- Boton navigation bar -->
+    <string name="Home">Home</string>
+    <string name="Profile">Perfil</string>
+    <string name="Guide">Guia</string>
+
+</resources>

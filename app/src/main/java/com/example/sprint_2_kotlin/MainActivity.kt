@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.*
@@ -13,7 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
+
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -26,8 +27,14 @@ import com.example.sprint_2_kotlin.viewmodel.HomeViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import com.example.sprint_2_kotlin.model.data.ThemePreferences
 import kotlinx.coroutines.launch
+import androidx.appcompat.app.AppCompatDelegate
 
-class MainActivity : FragmentActivity() {
+
+import androidx.core.os.LocaleListCompat
+
+
+
+class MainActivity : AppCompatActivity() {
 
     private val connectivityViewModel: HomeViewModel by viewModels()
 
@@ -40,10 +47,20 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+
+        val savedLocales = AppCompatDelegate.getApplicationLocales()
+        AppCompatDelegate.setApplicationLocales(savedLocales)
+
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
 
         setContent {
+
+
+
+
             // DARK MODE STATE - Lee la preferencia guardada
             val isDarkMode by ThemePreferences.isDarkMode(this).collectAsState(initial = false)
             val coroutineScope = rememberCoroutineScope()
@@ -242,6 +259,8 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+
 
     private fun showBiometricPrompt(
         onSuccess: () -> Unit,

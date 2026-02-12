@@ -1,3 +1,197 @@
 <resources>
     <string name="app_name">Punto_Neutro</string>
+    <!-- Edit Profile -->
+    <string name="profile">Profile</string>
+    <string name="notifications">notifications</string>
+    <string name="Edit">Edit </string>
+    <string name="Change_Language">Change Language</string>
+    <string name="Recent_activity">Recent activity</string>
+    <string name="Achievements">Achievements</string>
+    <string name="Coming_soon">Coming soon...</string>
+    <string name="Confirm_logout">Confirm logout</string>
+
+    <string name="Are_sure_you_want_to_log_out">Are you sure you want to log out? You will need to sign in again next time.</string>
+    <string name="Logout">Logout</string>
+
+    <string name="Settings">Settings</string>
+    <string name="Dark_mode">Dark mode</string>
+    <string name="Enabled">Enabled</string>
+    <string name="Disabled">Disabled</string>
+    <string name="Language">Language</string>
+    <string name="Mores_changes_coming_soon">Mores settings coming soon...</string>
+    <string name="Done">Done</string>
+    <string name="Anonymous_User">Anonymous User</string>
+    <string name="Active_session">Active session</string>
+    <string name="Admin_analytics">Admin analytics</string>
+    <string name="Articles_read">Articles read</string>
+
+    <string name="Comments_submitted">Comments submitted</string>
+    <string name="Bookmarks">Bookmarks</string>
+    <string name="Day_streak">Day streak</string>
+    <string name="Close">Close</string>
+    <string name="Activity">Activity</string>
+
+
+
+
+    <!-- comentario -->
+    <!-- BookMark -->
+    <string name="Saved_articles">Saved_article</string>
+    <string name="Clear_all_bookmarks">Clear All Bookmarks?</string>
+    <string name="This_will_remove_all">This will remove all</string>
+    <string name="This_action_cannot_be_undone">saved articles. This action cannot be undone.</string>
+    <string name="Clear_all">Clear All</string>
+    <string name="Offline_mode">Offline Mode</string>
+    <string name="All_synced">All synced</string>
+    <string name="Syncing...">All synced</string>
+    <string name="sync_pending">sync pending</string>
+    <string name="No_bookmarks_yet">No Bookmarks Yet</string>
+    <string name="Save_articles_to_read_them_later">Save articles to read them later</string>
+    <string name="Just_now">Just now</string>
+
+
+
+
+    <!-- Login -->
+
+    <string name="Login_in_automatically">Logging in automatically...</string>
+    <string name="Login_failed">Login</string>
+    <string name="Fighting_misinformation">Fighting misinformation</string>
+    <string name="A_collaborative_platform_where...">A collaborative platform where the community verifies news in real-time to combat disinformation.</string>
+    <string name="Register_failed">Register failed</string>
+    <string name="Source_credibility">Source_credibility_analysis</string>
+    <string name="Realtime_collaborative_verification">Real-time collaborative verification</string>
+    <string name="Network_of_verified_users">Network of verified users</string>
+    <string name="Access_your_account">Access your account</string>
+    <string name="Enter_your_credentials_to_continue">Enter your credentials to continue</string>
+    <string name="Sign_in">Sign in</string>
+    <string name="With_fingerprint">with fingerprint</string>
+    <string name="Register">Register</string>
+    <string name="You.example.com">you@example.com</string>
+    <string name="Forgot_Password">Forgot your password?</string>
+    <string name="Email">Email</string>
+    <string name="Password">Password</string>
+
+
+
+    <!-- News Feed -->
+    <string name="category_economics">Economics</string>
+    <string name="category_politics">Politics</string>
+    <string name="category_science">Science</string>
+    <string name="category_health">Health</string>
+    <string name="category_sports">Sports</string>
+    <string name="category_climate">Climate</string>
+    <string name="category_business">Business</string>
+    <string name="category_conflict">Conflict</string>
+    <string name="All">all</string>
+    <string name="No_results">No results</string>
+    <string name="No_news_found_for">No news found for </string>
+    <string name="No_matches_found">No matches found</string>
+    <string name="No_news_available">No news available</string>
+    <string name="Clear">Clear</string>
+    <string name="Read_more">Read more</string>
+    <string name="days_ago">days ago</string>
+    <string name="Unknown_source">Unknown source</string>
+    <string name="Author">Author</string>
+    <string name="Verified_author">Verified author</string>
+    <string name="Reliability">Reliability</string>
+    <string name="View_details">View details</string>
+    <string name="Filter">Filter</string>
+    <string name="Clear_search">Clear search</string>
+    <string name="Search">Search</string>
+    <string name="Search_news">Search news...</string>
+    <string name="Clear_filter">Clear filter</string>
+    <string name="Filtered_by">Filtered by</string>
+    <string name="article">article</string>
+    <string name="articles">articles</string>
+    <string name="found">found</string>
+    <string name="Dismiss">Dismiss</string>
+    <string name="Refreshing_news">Refresing news...</string>
+    <string name="Connection_restored">Connection restored</string>
+    <string name="Submit">Submit</string>
+    <string name="Article_published">Article published</string>
+    <string name="Cancel">Cancel</string>
+    <string name="Category">Category</string>
+    <string name="Select_Category">Select a Category</string>
+    <string name="Add_an_article">Add an article</string>
+    <string name="Refresh">Refresh</string>
+    <string name="No_news_in">No news in</string>
+    <string name="No_news">No news</string>
+    <string name="Loading_news">Loading news...</string>
+    <string name="Add">Add</string>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- News Detail -->
+    <string name="By">by</string>
+    <string name="at">at</string>
+    <string name="Published">Published</string>
+    <string name="total_ratings">total ratings</string>
+    <string name="Source">Source</string>
+    <string name="Add_comment">Add a comment</string>
+    <string name="Ratings_and_comments">Ratings and comments</string>
+    <string name="News_Details">News Details</string>
+    <string name="Comment">Comment</string>
+    <string name="Value">Value</string>
+    <!-- Guide tips -->
+    <string name="Guide_to_Identify_Fake_News">Guide to Identify Fake News</string>
+    <string name="Learn_to_detect_misinformation_and_manipulated_content">Learn to detect misinformation and manipulated content</string>
+    <string name="Examine_the_source">Examine the source</string>
+    <string name="Verify_if_the_website_is_known_and_reliable._Check_the_About_section_to_learn_more_about_the_organization.">Verify if the website is known and reliable. Check the "About" section to learn more about the organization.</string>
+    <string name="Basic">Basic</string>
+    <string name="Intermediate">Intermediate</string>
+    <string name="Advanced">Advanced</string>
+    <string name="Search_multiple_sources">Search multiple sources</string>
+    <string name="Real_">Real news are usually reported by multiple reliable media outlets. If it only appears on one site, be suspicious.</string>
+    <string name="Verify_the_author">Verify the author</string>
+    <string name="Look_up_info">Look up information about the journalist or author. Professionals usually have verifiable online presence.</string>
+    <string name="Beware_of_sensationalist_headlines">Beware of sensationalist headlines</string>
+    <string name="Overly_emotional_titles_or_those_with_ALL_CAPS_are_usually_indicators_of_questionable_content.">Overly emotional titles or those with ALL CAPS are usually indicators of questionable content.</string>
+    <string name="Check_the_dates">Check the dates</string>
+    <string name="Make_sure_the_information_">Make sure the information is current. Sometimes old news are recycled as if there were recent</string>
+    <string name="Use_verification_tools">Use verification tools</string>
+    <string name="Use_fact_checking_sites_">Use fact-checking sites like Snopes, PolitiFact, or Punto Neutro.</string>
+    <string name="Warning_Signs">Warning Signs</string>
+    <string name="Strange_URLs_or_many_spelling_errors">Strange URLs or many spelling errors</string>
+    <string name="Images_that_dont_match_the_text">Images that do not match the text</string>
+    <string name="Missing_date_or_clearly_identified_author">Missing date or clearly identified author</string>
+    <string name="Verification_Process">Verification Process</string>
+    <string name="First_reading">First reading</string>
+    <string name="Read_the_title_and_first_paragraph.">Read the title and first paragraph. Does it seem credible to you?</string>
+    <string name="Verify_the_source">Verify the source</string>
+    <string name="Research_who_published_the_information_and_their_reputation.">Research who published the information and their reputation.</string>
+    <string name="Look_for_corroboration">Look for corroboration</string>
+    <string name="Search_for_the_same_news_in_other_reliable_media_outlets.">Search for the same news in other reliable media outlets.</string>
+    <string name="Analyze_the_images">Analyze the images</string>
+    <string name="Use_reverse_image_search_to_verify_their_origin.">Use reverse image search to verify their origin.</string>
+    <string name="Consult_experts">Consult experts</string>
+    <string name="Look_for_opinions_from_specialists_on_the_topic_covered.">Look for opinions from specialists on the topic covered.</string>
+    <string name="Recommended_Tools">Recommended Tools</string>
+    <string name="Punto_Neutro_AI">Punto Neutro AI (coming in the future)</string>
+    <string name="Reverse_Search">Reverse Search</string>
+    <string name="Verify_the_origin_and_authenticity_of_images">Verify the origin and authenticity of images</string>
+
+
+
+
+
+
+
+    <!-- Boton navigation bar -->
+    <string name="Home">Home</string>
+    <string name="Profile">Profile</string>
+    <string name="Guide">Guide</string>
+
+
+
+
+
 </resources>

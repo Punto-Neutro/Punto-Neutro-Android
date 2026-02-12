@@ -13,9 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sprint_2_kotlin.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,14 +92,14 @@ fun GuideScreen(
         ) {
             item {
                 Text(
-                    text = "Guide to Identify Fake News",
+                    text = stringResource(R.string.Guide_to_Identify_Fake_News),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Learn to detect misinformation and manipulated content",
+                    text = stringResource(R.string.Learn_to_detect_misinformation_and_manipulated_content),
                     fontSize = 14.sp,
                     color = secondaryTextColor,
                     lineHeight = 20.sp
@@ -109,9 +111,9 @@ fun GuideScreen(
                 GuideTipCard(
                     isDarkMode = isDarkMode,
                     icon = Icons.Default.RemoveRedEye,
-                    title = "Examine the source",
-                    level = "Basic",
-                    description = "Verify if the website is known and reliable. Check the 'About' section to learn more about the organization."
+                    title = stringResource(R.string.Examine_the_source),
+                    level = stringResource(R.string.Basic),
+                    description = stringResource(R.string.Verify_if_the_website_is_known_and_reliable__Check_the_About_section_to_learn_more_about_the_organization_)
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -120,9 +122,9 @@ fun GuideScreen(
                 GuideTipCard(
                     isDarkMode = isDarkMode,
                     icon = Icons.Default.Search,
-                    title = "Search multiple sources",
-                    level = "Basic",
-                    description = "Real news is usually reported by multiple reliable media outlets. If it only appears on one site, be suspicious."
+                    title = stringResource(R.string.Search_multiple_sources),
+                    level = stringResource(R.string.Basic),
+                    description = stringResource(R.string.Real_)
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -131,9 +133,9 @@ fun GuideScreen(
                 GuideTipCard(
                     isDarkMode = isDarkMode,
                     icon = Icons.Default.Person,
-                    title = "Verify the author",
-                    level = "Intermediate",
-                    description = "Look up information about the journalist or author. Professionals usually have verifiable online presence.",
+                    title = stringResource(R.string.Verify_the_author),
+                    level = stringResource(R.string.Intermediate),
+                    description = stringResource(R.string.Look_up_info),
                     levelColor = Color(0xFFFFA726)
                 )
                 Spacer(Modifier.height(12.dp))
@@ -143,9 +145,9 @@ fun GuideScreen(
                 GuideTipCard(
                     isDarkMode = isDarkMode,
                     icon = Icons.Default.Warning,
-                    title = "Beware of sensationalist headlines",
-                    level = "Basic",
-                    description = "Overly emotional titles or those with ALL CAPS are usually indicators of questionable content."
+                    title = stringResource(R.string.Beware_of_sensationalist_headlines),
+                    level = stringResource(R.string.Basic),
+                    description = stringResource(R.string.Overly_emotional_titles_or_those_with_ALL_CAPS_are_usually_indicators_of_questionable_content_)
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -154,9 +156,9 @@ fun GuideScreen(
                 GuideTipCard(
                     isDarkMode = isDarkMode,
                     icon = Icons.Default.CheckCircle,
-                    title = "Check the dates",
-                    level = "Basic",
-                    description = "Make sure the information is current. Sometimes old news is recycled as if it were recent."
+                    title = stringResource(R.string.Check_the_dates),
+                    level = stringResource(R.string.Basic),
+                    description = stringResource(R.string.Make_sure_the_information_)
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -165,9 +167,9 @@ fun GuideScreen(
                 GuideTipCard(
                     isDarkMode = isDarkMode,
                     icon = Icons.Default.Shield,
-                    title = "Use verification tools",
-                    level = "Advanced",
-                    description = "Use fact-checking sites like Snopes, PolitiFact, or Punto Neutro's integrated tools.",
+                    title = stringResource(R.string.Use_verification_tools),
+                    level = stringResource(R.string.Advanced),
+                    description = stringResource(R.string.Use_fact_checking_sites_),
                     levelColor = Color(0xFF1976D2)
                 )
                 Spacer(Modifier.height(24.dp))
@@ -292,7 +294,7 @@ fun WarningSigns(isDarkMode: Boolean = false) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Warning Signs",
+                    text = stringResource(R.string.Warning_Signs),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
@@ -352,7 +354,7 @@ fun VerificationProcess(isDarkMode: Boolean = false) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Verification Process",
+                    text = stringResource(R.string.Verification_Process),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
@@ -364,40 +366,40 @@ fun VerificationProcess(isDarkMode: Boolean = false) {
             ProcessStep(
                 isDarkMode = isDarkMode,
                 number = "1",
-                title = "First reading",
-                description = "Read the title and first paragraph. Does it seem credible to you?"
+                title = stringResource(R.string.First_reading),
+                description = stringResource(R.string.Read_the_title_and_first_paragraph_)
             )
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
                 isDarkMode = isDarkMode,
                 number = "2",
-                title = "Verify the source",
-                description = "Research who published the information and their reputation."
+                title = stringResource(R.string.Verify_the_source),
+                description = stringResource(R.string.Research_who_published_the_information_and_their_reputation_)
             )
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
                 isDarkMode = isDarkMode,
                 number = "3",
-                title = "Look for corroboration",
-                description = "Search for the same news in other reliable media outlets."
+                title = stringResource(R.string.Look_for_corroboration),
+                description = stringResource(R.string.Search_for_the_same_news_in_other_reliable_media_outlets_)
             )
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
                 isDarkMode = isDarkMode,
                 number = "4",
-                title = "Analyze the images",
-                description = "Use reverse image search to verify their origin."
+                title = stringResource(R.string.Analyze_the_images),
+                description = stringResource(R.string.Use_reverse_image_search_to_verify_their_origin_)
             )
             Spacer(Modifier.height(12.dp))
 
             ProcessStep(
                 isDarkMode = isDarkMode,
                 number = "5",
-                title = "Consult experts",
-                description = "Look for opinions from specialists on the topic covered."
+                title = stringResource(R.string.Consult_experts),
+                description = stringResource(R.string.Look_for_opinions_from_specialists_on_the_topic_covered_)
             )
         }
     }
@@ -471,7 +473,7 @@ fun RecommendedTools(isDarkMode: Boolean = false) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Recommended Tools",
+                    text = stringResource(R.string.Recommended_Tools),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
@@ -483,7 +485,7 @@ fun RecommendedTools(isDarkMode: Boolean = false) {
             ToolCard(
                 isDarkMode = isDarkMode,
                 title = "Punto Neutro AI",
-                description = "Our integrated automatic verification system.",
+                description = stringResource(R.string.Punto_Neutro_AI),
                 icon = Icons.Default.SmartToy
             )
 
@@ -491,8 +493,8 @@ fun RecommendedTools(isDarkMode: Boolean = false) {
 
             ToolCard(
                 isDarkMode = isDarkMode,
-                title = "Reverse Search",
-                description = "Verify the origin and authenticity of images.",
+                title = stringResource(R.string.Reverse_Search),
+                description = stringResource(R.string.Verify_the_origin_and_authenticity_of_images),
                 icon = Icons.Default.ImageSearch
             )
         }
