@@ -285,7 +285,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     // Add News Function with connectivity resistance
     //========================================================
 
-    suspend fun addNews(url: String, category_id: Int): Int{
+    suspend fun addNews(url: String, category_id: Int,country: Int): Int{
 
         if (networkMonitor.isConnected.value){
             try {
@@ -319,6 +319,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                     image_url = imageUrl,
                     original_source_url = url,
                     category_id = category_id,
+                    country_id = country,
                     author_type = author_type,
                     author_institution = author_institution,
                     average_reliability_score = 0.0,
@@ -348,7 +349,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 return 1  }
 
         }else{
-            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = "", short_description = "", image_url = "", category_id = category_id, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
+            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = "", short_description = "", image_url = "", category_id = category_id, country_id = country, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
             Log.w(TAG,"Se activo el encolamiento")
             return 2
 

@@ -19,7 +19,7 @@ import androidx.room.RoomDatabase
         BookmarkSyncQueueEntity::class,   // update: Cola de sincronización para eventual connectivity
         Country::class
     ],
-    version = 8,  // update: Incrementado de 3 a 4
+    version = 9,  // update: Incrementado de 3 a 4
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

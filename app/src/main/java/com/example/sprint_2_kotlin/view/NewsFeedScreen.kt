@@ -1,5 +1,7 @@
 package com.example.sprint_2_kotlin.view
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -50,7 +52,9 @@ import coil.request.CachePolicy
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.example.sprint_2_kotlin.R
+import com.example.sprint_2_kotlin.model.data.Country
 import utils.getTranslatedCategoryName
+import utils.getTranslatedCountryName
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,6 +76,7 @@ fun NewsFeedScreen(
     val categories by viewModel.categories.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
+    val countries by viewModel.countries.collectAsState()
     val connectionRestored by viewModel.connectionRestored.collectAsState()
     val noSearchResults by viewModel.noSearchResults.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -94,6 +99,7 @@ fun NewsFeedScreen(
         FeedbackDialog(
             isDarkMode = isDarkMode,
             categories = categories,
+            countries = countries,
             onDismiss = { showDialog = false }
 
         )
@@ -239,7 +245,7 @@ fun NewsFeedScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: NewsFeedViewModel = viewModel(), onDismiss: () -> Unit) {
+fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<Country>, viewModel: NewsFeedViewModel = viewModel(), onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var URL by remember { mutableStateOf("") }
     var Author_type by remember{ mutableStateOf("") }
@@ -254,8 +260,12 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: N
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
 
 
-    var expanded by remember { mutableStateOf(false) }
+    var expandedcategory by remember { mutableStateOf(false) }
+
+    var expandedcountry by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
+    var selectedCountry by remember { mutableStateOf<Country?>(null) }
+
 
 
 
@@ -276,8 +286,8 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: N
 
                 // Dropdown menu for categories
                 ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
+                    expanded = expandedcategory,
+                    onExpandedChange = { expandedcategory = !expandedcategory }
                 ) {
                     OutlinedTextField(
                         value = selectedCategory?.name ?: stringResource(R.string.Select_Category),
@@ -285,27 +295,71 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: N
                         readOnly = true,
                         label = { Text("Category") },
                         trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedcategory)
                         },
                         modifier = Modifier
                             .menuAnchor()
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        expanded = expandedcategory,
+                        onDismissRequest = { expandedcategory = false }
                     ) {
                         categories.forEach { category ->
                             DropdownMenuItem(
                                 text = { Text(getTranslatedCategoryName(category.name)) },
                                 onClick = {
                                     selectedCategory = category
-                                    expanded = false
+                                    expandedcategory = false
                                 }
                             )
                         }
                     }
                 }
+
+
+
+                //Dropdown menu for Countries
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = expandedcountry,
+                    onExpandedChange = { expandedcountry = !expandedcountry }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCountry?.country_name?: stringResource(R.string.Select_Your_Country) ,
+                        onValueChange = {},
+                        label = { Text("Country") },
+                        readOnly = true,
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedcountry)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedcountry,
+                        onDismissRequest = { expandedcountry = false }
+                    ) {
+                        countries.forEach { country ->
+                            DropdownMenuItem(
+                                text = { Text(getTranslatedCountryName(country.country_name)) },
+                                onClick = {
+                                    selectedCountry = country
+                                    expandedcountry = false
+                                    Log.d(TAG, "Selected country = ${selectedCountry?.country_name}")
+                                    Log.d(TAG, "Selected country id= ${selectedCountry?.id}")
+
+                                }
+                            )
+                        }
+                    }
+                }
+
+
+
 
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
@@ -338,6 +392,8 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: N
 
 
                                 selectedCategory!!.category_id,
+                                selectedCountry!!.id,
+
                                 onSuccess = {
                                     showSuccessSnackbar = true
                                     onDismiss()
@@ -360,8 +416,9 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, viewModel: N
                 }
             }
         }
-    }
+     }
 }
+
 
 
 

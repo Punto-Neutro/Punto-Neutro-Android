@@ -13,6 +13,7 @@ data class NewsItem(
     val short_description: String = "",
     val image_url: String = "",
     val category_id: Int = 0,
+    val country_id: Int = 0,
     val author_type: String = "",
     val author_institution: String = "",
     val days_since: Int = 0,

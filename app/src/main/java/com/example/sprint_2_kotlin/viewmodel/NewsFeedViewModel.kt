@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.Category
+import com.example.sprint_2_kotlin.model.data.Country
 import com.example.sprint_2_kotlin.model.data.NewsItem
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +64,12 @@ class NewsFeedViewModel(
     private val _selectedCategory = MutableStateFlow<Category?>(null)
     val selectedCategory: StateFlow<Category?> = _selectedCategory
 
+    // ============================================
+    // Country filtering states
+    // ============================================
+
+    private val _countries = MutableStateFlow<List<Country>>(emptyList())
+    val countries: StateFlow<List<Country>> = _countries
     // ============================================
     // Search states
     // ============================================
@@ -128,6 +135,7 @@ class NewsFeedViewModel(
         // Load categories and initial news
         loadCategories(true)
         loadNewsItems()
+        loadCountries(false)
     }
 
     // ============================================
@@ -273,6 +281,22 @@ class NewsFeedViewModel(
             }
         }
     }
+
+
+    fun loadCountries(forcedRefresh: Boolean) {
+        viewModelScope.launch {
+            try {
+                Log.d(ContentValues.TAG, "Loading countries...")
+                val categoriesList = repository.getCountries(forcedRefresh )
+                _countries.value = categoriesList
+                Log.d(ContentValues.TAG, "Countries loaded: ${categoriesList.size}")
+            } catch (e: Exception) {
+                Log.e(ContentValues.TAG, "Error loading countries", e)
+                _countries.value = emptyList()
+            }
+        }
+    }
+
 
     fun clearCategoryFilter() {
         viewModelScope.launch {
@@ -481,11 +505,11 @@ class NewsFeedViewModel(
         Log.d(TAG, "🧹 NewsFeedViewModel cleared")
     }
 
-    fun AddNews(Url: String, Category_id: Int, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit ) {
+    fun AddNews(Url: String, Category_id: Int, country_id: Int, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit ) {
         viewModelScope.launch {
 
             try {
-            val response = repository.addNews( url = Url,  category_id = Category_id)
+            val response = repository.addNews( url = Url,  category_id = Category_id, country = country_id)
 
             if (response == 0){
                 withContext(Dispatchers.Main){
