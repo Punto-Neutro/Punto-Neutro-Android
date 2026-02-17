@@ -1,5 +1,6 @@
 package com.example.sprint_2_kotlin.viewmodel
 
+import android.R
 import android.app.Application
 import android.content.ContentValues
 import android.util.Log
@@ -125,7 +126,7 @@ class NewsFeedViewModel(
         observeNewsFeedFlow()
 
         // Load categories and initial news
-        loadCategories()
+        loadCategories(true)
         loadNewsItems()
     }
 
@@ -247,11 +248,11 @@ class NewsFeedViewModel(
     // CATEGORY FUNCTIONS
     // ============================================
 
-    private fun loadCategories() {
+    private fun loadCategories(forcedRefresh: Boolean) {
         viewModelScope.launch {
             try {
                 Log.d(TAG, "Loading categories...")
-                val categoriesList = repository.getCategories()
+                val categoriesList = repository.getCategories(forcedRefresh )
                 _categories.value = categoriesList
                 Log.d(TAG, "Categories loaded: ${categoriesList.size}")
             } catch (e: Exception) {
@@ -383,6 +384,7 @@ class NewsFeedViewModel(
         _newsItems.value = emptyList()
 
         loadNewsItems(forceRefresh = true)
+        loadCategories( true)
     }
 
     private suspend fun updateCacheStatus() {

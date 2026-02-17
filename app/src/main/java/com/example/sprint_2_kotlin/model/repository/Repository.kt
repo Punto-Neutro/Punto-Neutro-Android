@@ -59,6 +59,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     private val categoryDao = database.categoryDao()
 
+    private val countryDao = database.countryDao()
 
     // Cache expiration time: 30 minutes in milliseconds
     private val CACHE_EXPIRATION_TIME = 30 * 60 * 1000L
@@ -96,7 +97,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         }
     }
 
-    suspend fun signUp(email: String, password: String): Boolean {
+    suspend fun signUp(email: String, password: String, country: Int): Boolean {
         return try {
             auth.signUpWith(Email) {
                 this.email = email
@@ -104,7 +105,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             }
             val uid = auth.currentUserOrNull()?.id
             val data = UserProfile(
-                uid,email
+                uid,email,country
             )
             client.postgrest.from("user_profiles").insert(listOf(data))
 
@@ -657,7 +658,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 Log.d(TAG, "Fetching real rating distribution from Supabase...")
 
                 // 1. Obtener todas las categorías
-                val categories = getCategories()
+                val categories = getCategories(forcedrefresh = false)
                 if (categories.isEmpty()) {
                     Log.w(TAG, "No categories found in database")
                     return@withContext Result.failure(Exception("No categories found"))
@@ -790,8 +791,12 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     /**
      * Fetch all categories from Supabase
      */
-    suspend fun getCategories(): List<Category> = withContext(Dispatchers.IO) {
+    suspend fun getCategories(forcedrefresh: Boolean): List<Category> = withContext(Dispatchers.IO) {
         try {
+            if (forcedrefresh){
+                categoryDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
             // First, try to get categories from the local cache
             val cachedCategories = categoryDao.getAllCategories()
             if (cachedCategories.isNotEmpty()) {
@@ -898,8 +903,46 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             Log.e(TAG, "Error loading news feed with filter", e)
         }
 }
+    // COUNTRIES FUNCTIONS//
 
-}
+    suspend fun getCountries(forcedrefresh: Boolean): List<Country> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                countryDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+            // First, try to get categories from the local cache
+            val cachedCountries = countryDao.getAllCountries()
+            if (cachedCountries.isNotEmpty()) {
+                Log.d(TAG, "Countries loaded from cache: ${cachedCountries.size}")
+                return@withContext cachedCountries
+            }
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["Countries"].select()
+            val countries = response.decodeList<Country>()
+
+            // Save the fetched categories into the cache
+            if (countries.isNotEmpty()) {
+                countryDao.insertAll(countries)
+                Log.d(TAG, "Countries loaded from Supabase and cached: ${countries.size}")
+            } else {
+                Log.d(TAG, "No countries found on Supabase.")
+            }
+
+            countries
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading categories, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                countryDao.getAllCountries()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading categories from cache as fallback", dbError)
+                emptyList()
+            }
+        }
+    }
 
 
 suspend fun extractImageUrlFromArticle(url: String): String? {
@@ -1060,7 +1103,8 @@ suspend fun extractAuthorInstitution(url: String): String? {
             val articlePublisher = doc.select("meta[property=article:publisher]").attr("content")
             if (articlePublisher.isNotBlank()) {
                 // If it's a URL, we return the site name part, otherwise the text
-                return@withContext articlePublisher.substringAfterLast("/").replace("-", " ").capitalize()
+                return@withContext articlePublisher.substringAfterLast("/").replace("-", " ")
+                    .capitalize()
             }
 
             // 4. Fallback: Search for common classes in the footer or header
@@ -1073,4 +1117,9 @@ suspend fun extractAuthorInstitution(url: String): String? {
             return@withContext "Anonimo"
         }
     }
+  }
 }
+
+
+
+
