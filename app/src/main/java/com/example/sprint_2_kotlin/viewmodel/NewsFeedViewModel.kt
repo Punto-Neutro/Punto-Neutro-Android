@@ -70,6 +70,15 @@ class NewsFeedViewModel(
 
     private val _countries = MutableStateFlow<List<Country>>(emptyList())
     val countries: StateFlow<List<Country>> = _countries
+
+    // Holds the IDs of selected countries for filtering
+    private val _selectedCountryIds = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedCountryIds: StateFlow<Set<Int>> = _selectedCountryIds
+
+    // Holds the selected news scope: "All", "Local", or "International"
+    private val _newsScope = MutableStateFlow("All")
+    val newsScope: StateFlow<String> = _newsScope
+
     // ============================================
     // Search states
     // ============================================
@@ -211,10 +220,13 @@ class NewsFeedViewModel(
             // Combinar searchQuery y selectedCategory para reaccionar a cambios en ambos
             combine(
                 _searchQuery,
-                _selectedCategory
-            ) { query, category ->
-                Pair(query, category)
-            }.collectLatest { (query, category) ->
+                _selectedCategory,
+                _selectedCountryIds,
+                _newsScope
+            ) { query, category,countryIds, scope ->
+                Triple(query, category, Pair(countryIds, scope))
+            }.collectLatest { (query, category,filterPair) ->
+                val (countryIds, scope) = filterPair
 
                 Log.d(TAG, "🔍 Search/Filter changed - query: '$query', category: ${category?.name ?: "all"}")
 
@@ -229,14 +241,68 @@ class NewsFeedViewModel(
                     Log.e(TAG, " Error in Flow observation", exception)
                 }.collect { items ->
                     // Aplicar filtro de categoría si está seleccionado
-                    val filteredItems = if (category != null) {
+                    var filteredItems = if (category != null) {
                         items.filter { it.category_id == category.category_id }
                     } else {
                         items
                     }
 
-                    _newsItems.value = filteredItems
-                    Log.d(TAG, " Flow emitted: ${filteredItems.size} items (query: '$query', category: ${category?.name ?: "all"})")
+
+                    Log.e(TAG, "Selected country IDs: $countryIds")
+                    Log.e(TAG, "Selected scope: $scope")
+// In NewsFeedViewModel.kt -> observeNewsFeedFlow()
+
+// ...
+
+// Then, apply country/scope filter
+// You can get the user's country ID from their profile when they log in.
+// For now, we'll keep the hardcoded example.
+                    val userCountryId = 183 // Example: United States
+
+                    Log.d(TAG, "User's country ID for 'Local' filter is: $userCountryId")
+
+                    val finalFilteredItems = when {
+                        // 1. If specific countries are selected, use them. This has the highest priority.
+                        countryIds.isNotEmpty() -> {
+                            Log.d(TAG, "==> Applying MULTI-COUNTRY filter for IDs: $countryIds")
+                            filteredItems.filter { item ->
+                                val condition = item.country_id in countryIds
+                                // Log the check for each item
+                                Log.d(TAG, "  - Item #${item.news_item_id} (country: ${item.country_id}): condition '${item.country_id} in $countryIds' is $condition")
+                                condition
+                            }
+                        }
+                        // 2. If no specific countries are selected, check the scope.
+                        scope == "Local" -> {
+                            Log.d(TAG, "==> Applying 'LOCAL' news filter")
+                            filteredItems.filter { item ->
+                                val condition = item.country_id == userCountryId
+                                // Log the check for each item
+                                Log.d(TAG, "  - Item #${item.news_item_id} (country: ${item.country_id}): condition '${item.country_id} == $userCountryId' is $condition")
+                                condition
+                            }
+                        }
+                        scope == "International" -> {
+                            Log.d(TAG, "==> Applying 'INTERNATIONAL' news filter")
+                            filteredItems.filter { item ->
+                                val condition = item.country_id != userCountryId
+                                // Log the check for each item
+                                Log.d(TAG, "  - Item #${item.news_item_id} (country: ${item.country_id}): condition '${item.country_id} != $userCountryId' is $condition")
+                                condition
+                            }
+                        }
+                        // 3. Default case: If scope is "All" and no countries are selected, return the list as is.
+                        else -> {
+                            Log.d(TAG, "==> No country or scope filter applied. Returning all items.")
+                            filteredItems
+                        }
+                    }
+
+                    _newsItems.value = finalFilteredItems
+
+// ... rest of the function
+
+                    Log.d(TAG, " Flow emitted: ${finalFilteredItems.size} items (query: '$query', category: ${category?.name ?: "all"})")
 
                     // UPDATE: Detectar si hay búsqueda activa sin resultados
                     _noSearchResults.value = query.isNotBlank() && filteredItems.isEmpty()
@@ -560,6 +626,45 @@ class NewsFeedViewModel(
             }
         }
     }
+
+    //==================================================================
+    // COUNTRIES FUNCTIONS FOR FILTERING
+    //==================================================================
+
+
+    fun onCountrySelected(countryId: Int, isSelected: Boolean) {
+        val currentSelection = _selectedCountryIds.value.toMutableSet()
+        if (isSelected) {
+            currentSelection.add(countryId)
+        } else {
+            currentSelection.remove(countryId)
+        }
+        _selectedCountryIds.value = currentSelection
+        // When country selection changes, reset scope to "All"
+        _newsScope.value = "All"
+    }
+
+    fun onNewsScopeSelected(scope: String) {
+        _newsScope.value = scope
+        // When scope changes, clear specific country selections
+        _selectedCountryIds.value = emptySet()
+    }
+
+    fun applyFilters() {
+        viewModelScope.launch {
+            // This will trigger the flow observation to re-filter the news
+            // We just need to trigger a change, the logic is in the collector
+            _newsItems.value = _newsItems.value.map { it.copy() } // Trigger recomposition
+            Log.d(TAG, "Applying filters. Scope: ${_newsScope.value}, Countries: ${_selectedCountryIds.value}")
+        }
+    }
+
+    fun clearAllFilters() {
+        _selectedCountryIds.value = emptySet()
+        _newsScope.value = "All"
+        applyFilters()
+    }
+
 
 
 

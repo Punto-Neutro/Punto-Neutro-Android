@@ -83,6 +83,28 @@ fun NewsFeedScreen(
 
     var showDialog by remember { mutableStateOf(false) }
 
+    val selectedCountryIds by viewModel.selectedCountryIds.collectAsState()
+    val newsScope by viewModel.newsScope.collectAsState()
+
+    var showFilterDialog by remember { mutableStateOf(false) } // State to control the dialog
+
+
+// Add this check to display the dialog
+    if (showFilterDialog) {
+        FilterDialog(
+            isDarkMode = isDarkMode,
+            countries = countries,
+            selectedCountryIds = selectedCountryIds,
+            selectedScope = newsScope,
+            onCountrySelected = viewModel::onCountrySelected,
+            onScopeSelected = viewModel::onNewsScopeSelected,
+            onApply = viewModel::applyFilters,
+            onClear = viewModel::clearAllFilters,
+            onDismiss = { showFilterDialog = false }
+        )
+    }
+
+
     val shouldLoadMore = remember {
         derivedStateOf {
             val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -104,6 +126,8 @@ fun NewsFeedScreen(
 
         )
     }
+
+
 
     // Colores dinámicos según el tema
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
@@ -179,7 +203,7 @@ fun NewsFeedScreen(
                 item {
                     Column(modifier = Modifier.fillMaxWidth().background(surfaceColor)) {
                         FeedHeader(isDarkMode = isDarkMode, cacheStatus = cacheStatus)
-                        SearchBar(isDarkMode = isDarkMode, query = searchQuery, onQueryChange = { viewModel.updateSearchQuery(it) })
+                        SearchBar(isDarkMode = isDarkMode, query = searchQuery, onQueryChange = { viewModel.updateSearchQuery(it) }, onFilterClick = { showFilterDialog = true })
                         CategoryTabsFromSupabase(
                             isDarkMode = isDarkMode,
                             categories = categories,
@@ -213,7 +237,6 @@ fun NewsFeedScreen(
                             item { NoSearchResultsBanner(isDarkMode, searchQuery) { viewModel.clearSearch() } }
                         }
 
-                        item { MisinformationAlert(isDarkMode) }
 
                         // This is the core content. As long as this is rendered, scroll position is safe.
                         items(
@@ -514,63 +537,113 @@ fun CategoryTabsFromSupabase(
     }
 }
 
-@Composable
-fun FilterInfoCard(
-    isDarkMode: Boolean = false,
-    categoryName: String,
-    itemCount: Int,
-    onClearFilter: () -> Unit
-) {
-    val cardColor = if (isDarkMode) Color(0xFF1A3A5C) else Color(0xFFE3F2FD)
-    val textColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF1976D2)
+// Add this new composable at the end of the file
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+@Composable
+fun FilterDialog(
+    isDarkMode: Boolean,
+    countries: List<Country>,
+    selectedCountryIds: Set<Int>,
+    selectedScope: String,
+    onCountrySelected: (Int, Boolean) -> Unit,
+    onScopeSelected: (String) -> Unit,
+    onApply: () -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val primaryColor = if (isDarkMode) Color(0xFF9C27B0) else MaterialTheme.colorScheme.primary
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            modifier = Modifier.heightIn(max = 600.dp) // Limit height
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FilterList,
-                    contentDescription = stringResource(R.string.Filter),
-                    tint = textColor,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = stringResource(R.string.Filtered_by) + "$categoryName",
-                        fontWeight = FontWeight.SemiBold,
-                        color = textColor,
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = "$itemCount ${if (itemCount == 1) stringResource(R.string.article) else stringResource(R.string.articles)} ${stringResource(R.string.found)}",
-                        fontSize = 11.sp,
-                        color = textColor
-                    )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(stringResource(R.string.Filter), style = MaterialTheme.typography.titleLarge, color = textColor)
+                Spacer(Modifier.height(16.dp))
+
+                // Scope Selection (Local / International)
+                Text("By Scope", fontWeight = FontWeight.SemiBold, color = textColor)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ScopeChip("All", selectedScope == "All", isDarkMode) { onScopeSelected("All") }
+                    ScopeChip("Local", selectedScope == "Local", isDarkMode) { onScopeSelected("Local") }
+                    ScopeChip("International", selectedScope == "International", isDarkMode) { onScopeSelected("International") }
+                }
+
+                Divider(Modifier.padding(vertical = 16.dp))
+
+                // Country Selection
+                Text(stringResource(R.string.Filter_by_country), fontWeight = FontWeight.SemiBold, color = textColor)
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(countries.sortedBy { it.country_name }) { country ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onCountrySelected(country.id, country.id !in selectedCountryIds) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = country.id in selectedCountryIds,
+                                onCheckedChange = { isChecked -> onCountrySelected(country.id, isChecked) },
+                                colors = CheckboxDefaults.colors(checkedColor = primaryColor)
+                            )
+                            Text(
+                                text = getTranslatedCountryName(country.country_name),
+                                color = textColor,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Action Buttons
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = {
+                        onClear()
+                        onDismiss()
+                    }) {
+                        Text(stringResource(R.string.Clear_all), color = secondaryTextColor)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = {
+                        onApply()
+                        onDismiss()
+                    }) {
+                        Text(stringResource(R.string.Submit))
+                    }
                 }
             }
+        }
+    }
+}
 
-            IconButton(
-                onClick = onClearFilter,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.Clear_filter),
-                    tint = textColor,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+@Composable
+fun ScopeChip(text: String, isSelected: Boolean, isDarkMode: Boolean, onClick: () -> Unit) {
+    val selectedBgColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1A1A1A)
+    val unselectedTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (isSelected) selectedBgColor else Color.Transparent,
+        border = if (!isSelected) ButtonDefaults.outlinedButtonBorder else null,
+        modifier = Modifier.height(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = text,
+                color = if (isSelected) Color.White else unselectedTextColor,
+                fontSize = 14.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            )
         }
     }
 }
@@ -681,7 +754,9 @@ fun StatItem(
 fun SearchBar(
     isDarkMode: Boolean = false,
     query: String,
-    onQueryChange: (String) -> Unit
+    onQueryChange: (String) -> Unit,
+    onFilterClick: () -> Unit
+
 ) {
     val containerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF8F8F8)
     val borderColor = if (isDarkMode) Color(0xFF404040) else Color(0xFFDDDDDD)
@@ -690,12 +765,14 @@ fun SearchBar(
     val iconColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
     val filterBgColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF0F0F0)
 
+    var showFilters by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -735,7 +812,7 @@ fun SearchBar(
         Spacer(Modifier.width(8.dp))
 
         IconButton(
-            onClick = { },
+            onClick = { onFilterClick()},
             modifier = Modifier
                 .size(48.dp)
                 .background(filterBgColor, RoundedCornerShape(12.dp))
