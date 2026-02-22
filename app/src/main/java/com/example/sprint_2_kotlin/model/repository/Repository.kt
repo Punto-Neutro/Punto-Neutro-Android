@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.colorspace.connect
+
 import com.example.sprint_2_kotlin.model.data.*
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -22,8 +23,8 @@ import kotlinx.coroutines.withContext
 import utils.NetworkMonitor
 import org.jsoup.Jsoup
 import java.io.IOException
-
-
+import kotlin.collections.forEachIndexed
+import kotlin.collections.map
 
 
 /**
@@ -59,6 +60,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     private val categoryDao = database.categoryDao()
 
+    private val countryDao = database.countryDao()
 
     // Cache expiration time: 30 minutes in milliseconds
     private val CACHE_EXPIRATION_TIME = 30 * 60 * 1000L
@@ -96,7 +98,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         }
     }
 
-    suspend fun signUp(email: String, password: String): Boolean {
+    suspend fun signUp(email: String, password: String, country: Int): Boolean {
         return try {
             auth.signUpWith(Email) {
                 this.email = email
@@ -104,7 +106,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             }
             val uid = auth.currentUserOrNull()?.id
             val data = UserProfile(
-                uid,email
+                uid,email,country
             )
             client.postgrest.from("user_profiles").insert(listOf(data))
 
@@ -127,13 +129,54 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     // FETCH FUNCTIONS (EXISTING CODE - NO CHANGES)
     // ============================================
 
-    suspend fun getNewsItems(pageSize: Int = 20, startRow: Int = 0): List<NewsItem> {
+    // In Repository.kt
+
+// In Repository.kt
+
+    suspend fun getNewsItems(
+        pageSize: Int = 20,
+        startRow: Int = 0,
+        categoryFilter: Category? = null,
+        countryIdsFilter: Set<Int>? = null, // ✅ New parameter
+        scopeFilter: String? = null          // ✅ New parameter
+    ): List<NewsItem> {
+        val userCountryId = 183 // Example: United States. You might want to get this from a user profile later.
+
         val response = client.postgrest["news_items"].select {
+
+            // Your existing order and range logic
             order("added_to_app_date", order = Order.DESCENDING)
             range(startRow.toLong(), (startRow + pageSize - 1).toLong())
         }
-        return response.decodeList()
+
+        val networkNews = response.decodeList<NewsItem>()
+
+        Log.d(TAG, "✅ === Received ${networkNews.size} items from Supabase (paginated) ===")
+        networkNews.forEachIndexed { index, item ->
+            Log.d(TAG, "Supabase Item #${index + 1}: $item")
+        }
+
+        return networkNews
     }
+
+    suspend fun cacheNewsItems(newsItems: List<NewsItem>){
+
+        Log.d(TAG, "==========================================================")
+
+        val entities = newsItems.map { it.toEntity() }
+        // ======================= Log Room Data Here =======================
+        Log.d(TAG, "💾 === Caching ${entities.size} items into Room DB ===")
+        entities.forEachIndexed { index, entity ->
+            Log.d(TAG, "Room Entity #${index + 1}: $entity")
+        }
+        Log.d(TAG, "==========================================================")
+        // ====================================================================
+
+        newsItemDao.insertAllNewsItems(entities)
+
+        Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
+    }
+
 
     suspend fun getRatingsForNewsItem(newsItemId: Int): List<RatingItem> {
         return try {
@@ -284,7 +327,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     // Add News Function with connectivity resistance
     //========================================================
 
-    suspend fun addNews(url: String, category_id: Int): Int{
+    suspend fun addNews(url: String, category_id: Int,country: Int): Int{
 
         if (networkMonitor.isConnected.value){
             try {
@@ -318,6 +361,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                     image_url = imageUrl,
                     original_source_url = url,
                     category_id = category_id,
+                    country_id = country,
                     author_type = author_type,
                     author_institution = author_institution,
                     average_reliability_score = 0.0,
@@ -347,7 +391,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 return 1  }
 
         }else{
-            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = "", short_description = "", image_url = "", category_id = category_id, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
+            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = "", short_description = "", image_url = "", category_id = category_id, country_id = country, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
             Log.w(TAG,"Se activo el encolamiento")
             return 2
 
@@ -499,6 +543,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 Log.d(TAG, "🧹 Search cache cleared")
             }
             val entities = freshNewsItems.map { it.toEntity() }
+
             newsItemDao.insertAllNewsItems(entities)
 
             Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
@@ -657,7 +702,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 Log.d(TAG, "Fetching real rating distribution from Supabase...")
 
                 // 1. Obtener todas las categorías
-                val categories = getCategories()
+                val categories = getCategories(forcedrefresh = false)
                 if (categories.isEmpty()) {
                     Log.w(TAG, "No categories found in database")
                     return@withContext Result.failure(Exception("No categories found"))
@@ -790,8 +835,12 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     /**
      * Fetch all categories from Supabase
      */
-    suspend fun getCategories(): List<Category> = withContext(Dispatchers.IO) {
+    suspend fun getCategories(forcedrefresh: Boolean): List<Category> = withContext(Dispatchers.IO) {
         try {
+            if (forcedrefresh){
+                categoryDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
             // First, try to get categories from the local cache
             val cachedCategories = categoryDao.getAllCategories()
             if (cachedCategories.isNotEmpty()) {
@@ -890,6 +939,14 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             }
 
             val entities = freshNewsItems.map { it.toEntity() }
+            // ======================= Log Room Data Here =======================
+            Log.d(TAG, "💾 === Caching ${entities.size} items into Room DB ===")
+            entities.forEachIndexed { index, entity ->
+                Log.d(TAG, "Room Entity #${index + 1}: $entity")
+            }
+            Log.d(TAG, "==========================================================")
+            // ====================================================================
+
             newsItemDao.insertAllNewsItems(entities)
 
             Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
@@ -898,8 +955,46 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             Log.e(TAG, "Error loading news feed with filter", e)
         }
 }
+    // COUNTRIES FUNCTIONS//
 
-}
+    suspend fun getCountries(forcedrefresh: Boolean): List<Country> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                countryDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+            // First, try to get categories from the local cache
+            val cachedCountries = countryDao.getAllCountries()
+            if (cachedCountries.isNotEmpty()) {
+                Log.d(TAG, "Countries loaded from cache: ${cachedCountries.size}")
+                return@withContext cachedCountries
+            }
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["Countries"].select()
+            val countries = response.decodeList<Country>()
+
+            // Save the fetched categories into the cache
+            if (countries.isNotEmpty()) {
+                countryDao.insertAll(countries)
+                Log.d(TAG, "Countries loaded from Supabase and cached: ${countries.size}")
+            } else {
+                Log.d(TAG, "No countries found on Supabase.")
+            }
+
+            countries
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading categories, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                countryDao.getAllCountries()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading categories from cache as fallback", dbError)
+                emptyList()
+            }
+        }
+    }
 
 
 suspend fun extractImageUrlFromArticle(url: String): String? {
@@ -1060,7 +1155,8 @@ suspend fun extractAuthorInstitution(url: String): String? {
             val articlePublisher = doc.select("meta[property=article:publisher]").attr("content")
             if (articlePublisher.isNotBlank()) {
                 // If it's a URL, we return the site name part, otherwise the text
-                return@withContext articlePublisher.substringAfterLast("/").replace("-", " ").capitalize()
+                return@withContext articlePublisher.substringAfterLast("/").replace("-", " ")
+                    .capitalize()
             }
 
             // 4. Fallback: Search for common classes in the footer or header
@@ -1073,4 +1169,9 @@ suspend fun extractAuthorInstitution(url: String): String? {
             return@withContext "Anonimo"
         }
     }
+  }
 }
+
+
+
+

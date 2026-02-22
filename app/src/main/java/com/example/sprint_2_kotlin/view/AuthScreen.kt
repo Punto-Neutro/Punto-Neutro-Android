@@ -1,5 +1,7 @@
 package com.example.sprint_2_kotlin.view
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,10 +28,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import co.yml.charts.common.extensions.isNotNull
 import com.example.sprint_2_kotlin.R
 import com.example.sprint_2_kotlin.model.auth.BiometricAuthManager
+import com.example.sprint_2_kotlin.model.data.Category
+import com.example.sprint_2_kotlin.model.data.Country
 import com.example.sprint_2_kotlin.viewmodel.AuthViewModel
+import utils.getTranslatedCategoryName
+import utils.getTranslatedCountryName
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = viewModel(),
@@ -43,6 +52,11 @@ fun AuthScreen(
     val biometricManager = remember {
         BiometricAuthManager(context as FragmentActivity)
     }
+
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCountry by remember { mutableStateOf<Country?>(null) }
+    val countries by viewModel.countries.collectAsState()
+
 
     // Navigation check - auto navigate if session exists
     LaunchedEffect(state.isSuccess, state.isCheckingSession) {
@@ -245,6 +259,8 @@ fun AuthScreen(
 
                 Spacer(Modifier.height(6.dp))
 
+
+
                 OutlinedTextField(
                     value = state.password,
                     onValueChange = viewModel::onPasswordChange,
@@ -268,13 +284,74 @@ fun AuthScreen(
                     )
                 )
 
+                Spacer(Modifier.height(16.dp))
+
+                if(!isLoginMode){
+
+                    Text(
+                        text = stringResource(R.string.Country),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF1A1A1A),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+
+
+                    Spacer(Modifier.height(16.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCountry?.country_name?: stringResource(R.string.Select_Your_Country) ,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            countries.forEach { country ->
+                                DropdownMenuItem(
+                                    text = { Text(getTranslatedCountryName(country.country_name)) },
+                                    onClick = {
+                                        selectedCountry = country
+                                        expanded = false
+                                        Log.d(TAG, "Selected country = ${selectedCountry?.country_name}")
+                                        Log.d(TAG, "Selected country id= ${selectedCountry?.id}")
+
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(20.dp))
+
 
                 // Main Action Button negro
                 Button(
                     onClick = {
                         errorMessage = ""
-                        if (isLoginMode) viewModel.login() else viewModel.register()
+                        if (isLoginMode) {
+                            viewModel.login()
+                        } else {
+                            // Add a check to ensure a country is selected
+                            if (selectedCountry?.id != 0) { // Check for a valid ID, not 0
+                                viewModel.register(selectedCountry?.id ?: 0)
+                            } else {
+
+                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
+                                errorMessage = "Please select a country." // Show an error
+                            }
+                        }
                     },
                     enabled = !state.isLoading,
                     modifier = Modifier
