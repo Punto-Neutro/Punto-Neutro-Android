@@ -315,7 +315,7 @@ class NewsFeedViewModel(
 
                     // ✅ THE FIX: Store the complete filtered list and display only the first page
                     _fullFilteredList = finalFilteredItems
-                    _paginatedNewsItems.value = _fullFilteredList.take(PAGE_SIZE)
+                    _paginatedNewsItems.value = _fullFilteredList
 
                     // Update UI states based on the final list
                     _noSearchResults.value = query.isNotBlank() && finalFilteredItems.isEmpty()
@@ -502,10 +502,9 @@ class NewsFeedViewModel(
 
                 if (newItems.isNotEmpty()) {
                     // IMPORTANT: Add to both the full list and the visible list
-                    _fullFilteredList = _fullFilteredList + newItems
-                    _paginatedNewsItems.value = _paginatedNewsItems.value + newItems
-                    currentOffset += newItems.size // Increment network offset
+                    currentOffset += newItems.size
                     isLastPage = newItems.size < PAGE_SIZE
+                    repository.cacheNewsItems(newItems)
                 } else {
                     isLastPage = true
                     Log.d(TAG, "🏁 Reached the last page (no more items from network).")

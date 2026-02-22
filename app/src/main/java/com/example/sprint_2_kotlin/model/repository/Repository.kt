@@ -23,8 +23,8 @@ import kotlinx.coroutines.withContext
 import utils.NetworkMonitor
 import org.jsoup.Jsoup
 import java.io.IOException
-
-
+import kotlin.collections.forEachIndexed
+import kotlin.collections.map
 
 
 /**
@@ -143,29 +143,6 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         val userCountryId = 183 // Example: United States. You might want to get this from a user profile later.
 
         val response = client.postgrest["news_items"].select {
-            filter {
-                // Apply category filter on the server if it exists
-                if (categoryFilter != null) {
-                    eq("category_id", categoryFilter.category_id)
-                }
-
-                // Apply country/scope filters
-                when {
-                    // Priority 1: Specific countries are selected
-                    !countryIdsFilter.isNullOrEmpty() -> {
-                        isIn("country_id", countryIdsFilter.toList())
-                    }
-                    // Priority 2: Scope is "Local"
-                    scopeFilter == "Local" -> {
-                        eq("country_id", userCountryId)
-                    }
-                    // Priority 3: Scope is "International"
-                    scopeFilter == "International" -> {
-                        neq("country_id", userCountryId)
-                    }
-                    // Default: "All" scope and no specific countries, so no country filter is applied.
-                }
-            }
 
             // Your existing order and range logic
             order("added_to_app_date", order = Order.DESCENDING)
@@ -178,9 +155,26 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         networkNews.forEachIndexed { index, item ->
             Log.d(TAG, "Supabase Item #${index + 1}: $item")
         }
-        Log.d(TAG, "==========================================================")
 
         return networkNews
+    }
+
+    suspend fun cacheNewsItems(newsItems: List<NewsItem>){
+
+        Log.d(TAG, "==========================================================")
+
+        val entities = newsItems.map { it.toEntity() }
+        // ======================= Log Room Data Here =======================
+        Log.d(TAG, "💾 === Caching ${entities.size} items into Room DB ===")
+        entities.forEachIndexed { index, entity ->
+            Log.d(TAG, "Room Entity #${index + 1}: $entity")
+        }
+        Log.d(TAG, "==========================================================")
+        // ====================================================================
+
+        newsItemDao.insertAllNewsItems(entities)
+
+        Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
     }
 
 
