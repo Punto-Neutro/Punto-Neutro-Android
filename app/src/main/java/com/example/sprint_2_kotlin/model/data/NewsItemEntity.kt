@@ -46,6 +46,7 @@ fun NewsItemEntity.toNewsItem(): NewsItem {
         short_description = this.short_description,
         image_url = this.image_url,
         category_id = this.category_id,
+        country_id = this.country_id,
         author_type = this.author_type,
         author_institution = this.author_institution,
         days_since = this.days_since,

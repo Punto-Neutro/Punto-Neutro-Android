@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.colorspace.connect
+
 import com.example.sprint_2_kotlin.model.data.*
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -128,13 +129,60 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     // FETCH FUNCTIONS (EXISTING CODE - NO CHANGES)
     // ============================================
 
-    suspend fun getNewsItems(pageSize: Int = 20, startRow: Int = 0): List<NewsItem> {
+    // In Repository.kt
+
+// In Repository.kt
+
+    suspend fun getNewsItems(
+        pageSize: Int = 20,
+        startRow: Int = 0,
+        categoryFilter: Category? = null,
+        countryIdsFilter: Set<Int>? = null, // ✅ New parameter
+        scopeFilter: String? = null          // ✅ New parameter
+    ): List<NewsItem> {
+        val userCountryId = 183 // Example: United States. You might want to get this from a user profile later.
+
         val response = client.postgrest["news_items"].select {
+            filter {
+                // Apply category filter on the server if it exists
+                if (categoryFilter != null) {
+                    eq("category_id", categoryFilter.category_id)
+                }
+
+                // Apply country/scope filters
+                when {
+                    // Priority 1: Specific countries are selected
+                    !countryIdsFilter.isNullOrEmpty() -> {
+                        isIn("country_id", countryIdsFilter.toList())
+                    }
+                    // Priority 2: Scope is "Local"
+                    scopeFilter == "Local" -> {
+                        eq("country_id", userCountryId)
+                    }
+                    // Priority 3: Scope is "International"
+                    scopeFilter == "International" -> {
+                        neq("country_id", userCountryId)
+                    }
+                    // Default: "All" scope and no specific countries, so no country filter is applied.
+                }
+            }
+
+            // Your existing order and range logic
             order("added_to_app_date", order = Order.DESCENDING)
             range(startRow.toLong(), (startRow + pageSize - 1).toLong())
         }
-        return response.decodeList()
+
+        val networkNews = response.decodeList<NewsItem>()
+
+        Log.d(TAG, "✅ === Received ${networkNews.size} items from Supabase (paginated) ===")
+        networkNews.forEachIndexed { index, item ->
+            Log.d(TAG, "Supabase Item #${index + 1}: $item")
+        }
+        Log.d(TAG, "==========================================================")
+
+        return networkNews
     }
+
 
     suspend fun getRatingsForNewsItem(newsItemId: Int): List<RatingItem> {
         return try {
@@ -501,6 +549,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 Log.d(TAG, "🧹 Search cache cleared")
             }
             val entities = freshNewsItems.map { it.toEntity() }
+
             newsItemDao.insertAllNewsItems(entities)
 
             Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
@@ -896,6 +945,14 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             }
 
             val entities = freshNewsItems.map { it.toEntity() }
+            // ======================= Log Room Data Here =======================
+            Log.d(TAG, "💾 === Caching ${entities.size} items into Room DB ===")
+            entities.forEachIndexed { index, entity ->
+                Log.d(TAG, "Room Entity #${index + 1}: $entity")
+            }
+            Log.d(TAG, "==========================================================")
+            // ====================================================================
+
             newsItemDao.insertAllNewsItems(entities)
 
             Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
