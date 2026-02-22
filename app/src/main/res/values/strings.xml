@@ -122,6 +122,9 @@
     <string name="Loading_news">Loading news...</string>
     <string name="Add">Add</string>
     <string name="Filter_by_country">By countries</string>
+    <string name="By_scope">By scope</string>
+    <string name="Local">Local</string>
+    <string name="International">International</string>
 
 
 
