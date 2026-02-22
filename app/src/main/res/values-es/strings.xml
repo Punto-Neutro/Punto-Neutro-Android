@@ -114,6 +114,9 @@
     <string name="Loading_news">Cargando noticias...</string>
     <string name="Add">Añadir</string>
     <string name="Filter_by_country">Por paises</string>
+    <string name="By_scope">Por alcance</string>
+    <string name="Local">Local</string>
+    <string name="International">Internacional</string>
 
 
 

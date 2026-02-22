@@ -567,12 +567,12 @@ fun FilterDialog(
                 Spacer(Modifier.height(16.dp))
 
                 // Scope Selection (Local / International)
-                Text("By Scope", fontWeight = FontWeight.SemiBold, color = textColor)
+                Text(stringResource(R.string.By_scope), fontWeight = FontWeight.SemiBold, color = textColor)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ScopeChip("All", selectedScope == "All", isDarkMode) { onScopeSelected("All") }
-                    ScopeChip("Local", selectedScope == "Local", isDarkMode) { onScopeSelected("Local") }
-                    ScopeChip("International", selectedScope == "International", isDarkMode) { onScopeSelected("International") }
+                    ScopeChip(stringResource(R.string.All), selectedScope == "All", isDarkMode) { onScopeSelected("All") }
+                    ScopeChip(stringResource(R.string.Local), selectedScope == "Local", isDarkMode) { onScopeSelected("Local") }
+                    ScopeChip(stringResource(R.string.International), selectedScope == "International", isDarkMode) { onScopeSelected("International") }
                 }
 
                 Divider(Modifier.padding(vertical = 16.dp))
