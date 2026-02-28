@@ -117,6 +117,10 @@
     <string name="By_scope">Por alcance</string>
     <string name="Local">Local</string>
     <string name="International">Internacional</string>
+    <string name="Submit_a_request">Enviar una PQRS</string>
+    <string name="Type">tipo</string>
+    <string name="Description">Descripción</string>
+    <string name="Select_a_type">Seleccione un tipo</string>
 
 
 

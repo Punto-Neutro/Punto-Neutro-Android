@@ -89,6 +89,7 @@ fun NewsFeedScreen(
     var showFilterDialog by remember { mutableStateOf(false) } // State to control the dialog
 
 
+    var showDialogPQRS by remember { mutableStateOf(false) } // State to control the dialog
 // Add this check to display the dialog
     if (showFilterDialog) {
         FilterDialog(
@@ -127,7 +128,15 @@ fun NewsFeedScreen(
         )
     }
 
+    if (showDialogPQRS) {
+        PQRsDialog(
+            isDarkMode = isDarkMode,
+            categories = categories,
+            countries = countries,
+            onDismiss = { showDialogPQRS = false }
 
+        )
+    }
 
     // Colores dinámicos según el tema
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
@@ -167,13 +176,33 @@ fun NewsFeedScreen(
 
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showDialog = true },
-                containerColor = if (isDarkMode) Color(0xFF9C27B0) else MaterialTheme.colorScheme.primary,
-                contentColor = Color.White
+            // Use a Box to position multiple FABs
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 32.dp) // Offset for the system navigation bar
             ) {
-                Icon(Icons.Filled.Add, "Add")
+                // Left FAB (PQRS)
+                FloatingActionButton(
+                    onClick = { showDialogPQRS = true },
+                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White,
+                    modifier = Modifier.align(Alignment.BottomStart) // Align to Bottom Left
+                ) {
+                    Icon(Icons.Filled.AddReaction, "Add PQRS")
+                }
+
+                // Right FAB (Feedback/Article)
+                FloatingActionButton(
+                    onClick = { showDialog = true },
+                    containerColor = if (isDarkMode) Color(0xFF9C27B0) else MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White,
+                    modifier = Modifier.align(Alignment.BottomEnd) // Align to Bottom Right
+                ) {
+                    Icon(Icons.Filled.PostAdd, "Add Article")
+                }
             }
         },
 
@@ -316,7 +345,7 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: L
                         value = selectedCategory?.name ?: stringResource(R.string.Select_Category),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Category") },
+                        label = { Text(stringResource(R.string.Category)) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedcategory)
                         },
@@ -353,7 +382,7 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: L
                     OutlinedTextField(
                         value = selectedCountry?.country_name?: stringResource(R.string.Select_Your_Country) ,
                         onValueChange = {},
-                        label = { Text("Country") },
+                        label = { Text(stringResource(R.string.Country)) },
                         readOnly = true,
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedcountry)
@@ -443,6 +472,140 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: L
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<Country>, viewModel: NewsFeedViewModel = viewModel(), onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var URL by remember { mutableStateOf("") }
+    var Author_type by remember{ mutableStateOf("") }
+    var Author_institution by remember{ mutableStateOf("") }
+    var Description by remember { mutableStateOf("") }
+    var showSuccessSnackbar by remember {mutableStateOf(false)}
+    var message by remember { mutableStateOf<String?>(null) }
+
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
+
+
+    var expandedcategory by remember { mutableStateOf(false) }
+
+    var expandedcountry by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<Category?>(null) }
+    var selectedCountry by remember { mutableStateOf<Country?>(null) }
+
+
+
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(stringResource(R.string.Submit_a_request), style = MaterialTheme.typography.titleLarge, color = textColor)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dropdown menu for categories
+                ExposedDropdownMenuBox(
+                    expanded = expandedcategory,
+                    onExpandedChange = { expandedcategory = !expandedcategory }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCategory?.name ?: stringResource(R.string.Select_a_type),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = {Text(stringResource(R.string.Type)) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedcategory)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedcategory,
+                        onDismissRequest = { expandedcategory = false }
+                    ) {
+                        categories.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(getTranslatedCategoryName(category.name)) },
+                                onClick = {
+                                    selectedCategory = category
+                                    expandedcategory = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+
+
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = Description,
+                    onValueChange = { URL = it },
+                    label = { Text(stringResource(R.string.Description)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.Cancel))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+
+
+                            // Handle submission logic here
+                            viewModel.AddNews(
+
+                                URL,
+
+
+
+                                selectedCategory!!.category_id,
+                                selectedCountry!!.id,
+
+                                onSuccess = {
+                                    showSuccessSnackbar = true
+                                    onDismiss()
+                                },
+                                onWait = {message = ":D"},
+                                onError = {},
+                            )
+                            onDismiss()
+                        },
+                    ) {
+                        Text(stringResource(R.string.Submit))
+                    }
+                    message?.let {
+                        Text(
+                            it,
+                            color = secondaryTextColor,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 @Composable
@@ -707,18 +870,7 @@ fun FeedHeader(
             )
         }
     }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        StatItem(isDarkMode = isDarkMode, value = "1,247", label = "Verified today")
-        StatItem(isDarkMode = isDarkMode, value = "25", label = "Fake detected", color = Color(0xFFE53935))
-        StatItem(isDarkMode = isDarkMode, value = "158", label = "Verifying")
-    }
-
+    
     Divider(
         modifier = Modifier.padding(vertical = 8.dp),
         color = dividerColor
@@ -1151,7 +1303,8 @@ fun BottomNavigationBar(
 
     NavigationBar(
         containerColor = containerColor,
-        tonalElevation = 8.dp
+        tonalElevation = 8.dp,
+        windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },

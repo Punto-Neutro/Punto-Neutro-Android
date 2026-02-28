@@ -849,7 +849,8 @@ fun ProfileBottomNavigationBar(
 
     NavigationBar(
         containerColor = containerColor,
-        tonalElevation = 8.dp
+        tonalElevation = 8.dp,
+        windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.Home, contentDescription = "Home") },
