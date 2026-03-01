@@ -129,6 +129,10 @@
     <string name="Type">type</string>
     <string name="Description">Description</string>
     <string name="Select_a_type">Select a type</string>
+    <string name="petition">petition</string>
+    <string name="claim">claim</string>
+    <string name="suggestion">suggestion</string>
+    <string name="complaint">complaint</string>
 
 
 

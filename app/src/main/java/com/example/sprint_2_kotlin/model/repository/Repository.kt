@@ -31,7 +31,7 @@ import kotlin.collections.map
  * Repository with Cache-First Strategy for News Feed
  * Maintains all existing Supabase functionality
  */
-class Repository(private val context: Context,private val daocomment: CommentDao, private val daonewsitem: NewsItemDao ) {
+class Repository(private val context: Context,private val daocomment: CommentDao, private val daonewsitem: NewsItemDao, private val daopqrs: PQRSDao, private val daotypespqrs: PQRS_typesDao ) {
 
     // ============================================
     // SUPABASE CLIENT (EXISTING CODE - NO CHANGES)
@@ -1170,6 +1170,146 @@ suspend fun extractAuthorInstitution(url: String): String? {
         }
     }
   }
+
+    // =======================================================
+    // PQRS Functions
+    // =======================================================
+    suspend fun addPQRS(description: String, type_id: Int): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+                val datos = PQRS(
+                     description,
+                     type_id,
+                    userProfileIdActual,
+                    )
+
+                val answer = client.from("PQRS").insert(listOf(datos)) {}
+
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            daopqrs.insert(PQRS(user_id = 0, description = description, type_id = type_id, ))
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun getPQRS_types(forcedrefresh: Boolean): List<PQRS_types> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                daotypespqrs.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+            // First, try to get categories from the local cache
+            val cachedPQRStypes = daotypespqrs.getAllPQRS_types()
+            if (cachedPQRStypes.isNotEmpty()) {
+                Log.d(TAG, "Countries loaded from cache: ${cachedPQRStypes.size}")
+                return@withContext cachedPQRStypes
+            }
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["PQRS_types"].select()
+            val pqrstypes = response.decodeList<PQRS_types>()
+
+            // Save the fetched categories into the cache
+            if (pqrstypes.isNotEmpty()) {
+                daotypespqrs.insertAll(pqrstypes)
+                Log.d(TAG, "PQRS types loaded from Supabase and cached: ${pqrstypes.size}")
+            } else {
+                Log.d(TAG, "No countries found on Supabase.")
+            }
+
+            pqrstypes
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading pqrs types, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                daotypespqrs.getAllPQRS_types()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading pqrs types from cache as fallback", dbError)
+                emptyList()
+            }
+        }
+    }
+
+
+    suspend fun syncPendingPQRS():Int {
+
+        if (!networkMonitor.isConnected.value) {
+            Log.d(TAG, "Cannot sync pending PQRS, no internet connection.")
+            return 2 // No connection
+        }
+
+        try {
+            Log.d(TAG, "Syncing pending PQRS...")
+
+            // 1. Get the current user's profile to assign ownership
+            val user = client.auth.currentUserOrNull()?.id ?: return 2 // Not logged in
+            val profileResponse = client.from("user_profiles").select { filter { eq("user_auth_id", user) } }
+            val profile = profileResponse.decodeList<UserProfile>().firstOrNull() ?: return 2 // Profile not found
+
+            // 2. Get all pending news items from the local database
+            val pendingPQRS = daopqrs.getAllPendingPQRS() // Assuming you create this DAO function
+            if (pendingPQRS.isEmpty()) {
+                Log.d(TAG, "No pending news to sync.")
+                return 1 // Nothing to sync
+            }
+
+            Log.d(TAG, "Found ${pendingPQRS.size} pending news items to upload.")
+
+            // 3. Iterate through each pending item and upload it
+            for (pendingItem in pendingPQRS) {
+                try {
+                    // Fetch the image URL online, as it wasn't available offline
+
+                    // Create a NewsItem object for Supabase, mapping fields from NewsItemEntity
+                    val PQRSToUpload = PQRS(pendingItem.description,pendingItem.type_id, profile.user_profile_id
+                    )
+
+                    // Insert the item into the remote 'news_items' table
+                    client.from("PQRS").insert(PQRSToUpload)
+
+                    // 4. If upload is successful, delete the pending item from the local DB
+                    daopqrs.delete(pendingItem)
+                    Log.d(TAG, "Successfully synced and deleted pending news item: ${pendingItem.type_id}")
+
+                } catch (uploadError: Exception) {
+                    Log.e(TAG, "Failed to sync pending news item: ${pendingItem.type_id}", uploadError)
+                    // If a single item fails, we can choose to continue with the next one
+                    // or stop. Continuing is generally better for robustness.
+                }
+            }
+            // After syncing, clear the main news cache to ensure data is fresh on next load
+            clearCache()
+            return 1 // Sync process completed
+
+        } catch (e: Exception) {
+            Log.e(TAG, "An error occurred during the news sync process", e)
+            return 0 // General failure
+        }
+    }
+
+
+
 }
 
 

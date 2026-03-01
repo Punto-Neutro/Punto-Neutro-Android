@@ -242,3 +242,22 @@ fun getTranslatedCountryName(countryName: String): String {
         countryName
     }
 }
+
+@Composable
+fun getTranslatedPQRStypeame(pqrstypename: String): String {
+    val resourceId = when (pqrstypename.lowercase()) {
+        "petition" -> R.string.petition
+        "suggestion" -> R.string.suggestion
+        "claim" -> R.string.claim
+        "complaint" -> R.string.complaint
+        // Add other categories here
+        else -> -1 // Default case for unknown categories
+    }
+
+    // If a mapping is found, return the string resource. Otherwise, return the original name.
+    return if (resourceId != -1) {
+        stringResource(id = resourceId)
+    } else {
+        pqrstypename
+    }
+}

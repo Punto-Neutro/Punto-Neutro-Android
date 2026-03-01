@@ -121,6 +121,10 @@
     <string name="Type">tipo</string>
     <string name="Description">Descripción</string>
     <string name="Select_a_type">Seleccione un tipo</string>
+    <string name="petition">petición</string>
+    <string name="claim">reclamo</string>
+    <string name="suggestion">sugerencia</string>
+    <string name="complaint">queja</string>
 
 
 

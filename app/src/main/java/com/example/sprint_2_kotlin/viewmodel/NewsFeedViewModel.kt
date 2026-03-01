@@ -12,6 +12,7 @@ import com.example.sprint_2_kotlin.model.data.AppDatabase
 import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.model.data.Country
 import com.example.sprint_2_kotlin.model.data.NewsItem
+import com.example.sprint_2_kotlin.model.data.PQRS_types
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -47,7 +48,12 @@ class NewsFeedViewModel(
     private val dao = AppDatabase.getDatabase(application).CommentDao()
 
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
-    private val repository = Repository(application.applicationContext, dao, daonews)
+
+    private val daopqrs = AppDatabase.getDatabase(application).PQRSDao()
+
+    private val daotypespqrs = AppDatabase.getDatabase(application).PQRS_typesDao()
+
+    private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daotypespqrs)
 
     //  NEW: Network monitor to detect connection changes
     private val networkMonitor = NetworkMonitor(application.applicationContext)
@@ -122,6 +128,15 @@ class NewsFeedViewModel(
     val errorMessage: StateFlow<String?> = _errorMessage
 
     // ============================================
+    //  PQRS states
+    // ============================================
+
+    private val _pqrstypes = MutableStateFlow<List<PQRS_types>>(emptyList())
+    val pqrstypes: StateFlow<List<PQRS_types>> = _pqrstypes
+
+
+
+    // ============================================
     //  NEW: Network connection states
     // ============================================
 
@@ -160,6 +175,7 @@ class NewsFeedViewModel(
         loadCategories(true)
         loadNewsItems()
         loadCountries(false)
+        loadPQRStypes(forcedRefresh = false)
     }
 
     // ============================================
@@ -426,7 +442,6 @@ class NewsFeedViewModel(
     // LOAD NEWS ITEMS
     // ============================================
 
-    // NewsFeedViewModel.kt
 
     fun loadNewsItems(forceRefresh: Boolean = false) {
         // If we are already loading, don't trigger another one
@@ -462,11 +477,6 @@ class NewsFeedViewModel(
 
 
 
-    // In NewsFeedViewModel.kt
-
-    // In NewsFeedViewModel.kt
-
-    // In NewsFeedViewModel.kt
 
     fun loadNextPage() {
         if (_isLoading.value || isLastPage) return
@@ -670,6 +680,7 @@ class NewsFeedViewModel(
                 _isConnected.value = connected
                 if (connected) {
                     repository.syncPendingNews()
+                    repository.syncPendingPQRS()
                     repository.clearCache()
 
 
@@ -728,6 +739,55 @@ class NewsFeedViewModel(
     }
 
 
+    //==============================================================
+    // PQRS Functions
+    //==============================================================
+
+    fun AddPQRS(description: String, type_id: Int, onSuccess: () -> Unit, onError: (Throwable) -> Unit,onWait: ()-> Unit ) {
+        viewModelScope.launch {
+
+            try {
+                val response = repository.addPQRS(description = description, type_id = type_id)
+
+                if (response == 0){
+                    withContext(Dispatchers.Main){
+                        onSuccess()
+                        refreshNewsFeed()
+                        loadNewsItems()
+                    }
+
+                }else if (response == 2) {
+                    Log.w(ContentValues.TAG,"Se activo el encolamiento")
+                    withContext(Dispatchers.Main){
+                        onWait()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main){
+                    onError(e)
+                }
+
+            }
+
+        }
+
+    }
+
+
+
+    fun loadPQRStypes(forcedRefresh: Boolean) {
+        viewModelScope.launch {
+            try {
+                Log.d(ContentValues.TAG, "Loading PQRStypes...")
+                val pqrsList = repository.getPQRS_types(forcedRefresh )
+                _pqrstypes.value = pqrsList
+                Log.d(ContentValues.TAG, "PQRS types loaded: ${pqrsList.size}")
+            } catch (e: Exception) {
+                Log.e(ContentValues.TAG, "Error loading PQRS types", e)
+                _pqrstypes.value = emptyList()
+            }
+        }
+    }
 
 
 }

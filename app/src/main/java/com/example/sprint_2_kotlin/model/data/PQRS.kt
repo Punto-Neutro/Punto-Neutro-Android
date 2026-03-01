@@ -8,8 +8,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PQRS(
-    @PrimaryKey val id: Int = 0,
     val description: String = "",
     val type_id : Int = 0,
-    val user_id: Int = 0
+    val user_id: Int = 0,
+    @PrimaryKey (autoGenerate = true) val id: Int = 0,
 )

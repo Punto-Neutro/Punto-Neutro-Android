@@ -53,8 +53,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.example.sprint_2_kotlin.R
 import com.example.sprint_2_kotlin.model.data.Country
+import com.example.sprint_2_kotlin.model.data.PQRS_types
 import utils.getTranslatedCategoryName
 import utils.getTranslatedCountryName
+import utils.getTranslatedPQRStypeame
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,6 +79,7 @@ fun NewsFeedScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     val countries by viewModel.countries.collectAsState()
+    val pqrstypes by viewModel.pqrstypes.collectAsState()
     val connectionRestored by viewModel.connectionRestored.collectAsState()
     val noSearchResults by viewModel.noSearchResults.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -132,7 +135,7 @@ fun NewsFeedScreen(
         PQRsDialog(
             isDarkMode = isDarkMode,
             categories = categories,
-            countries = countries,
+            pqrstypes = pqrstypes ,
             onDismiss = { showDialogPQRS = false }
 
         )
@@ -342,7 +345,7 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: L
                     onExpandedChange = { expandedcategory = !expandedcategory }
                 ) {
                     OutlinedTextField(
-                        value = selectedCategory?.name ?: stringResource(R.string.Select_Category),
+                        value = selectedCategory?.let { getTranslatedCategoryName(it.name) } ?: stringResource(R.string.Select_Category),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.Category)) },
@@ -380,7 +383,7 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: L
                     onExpandedChange = { expandedcountry = !expandedcountry }
                 ) {
                     OutlinedTextField(
-                        value = selectedCountry?.country_name?: stringResource(R.string.Select_Your_Country) ,
+                        value =  selectedCountry?.let { getTranslatedCountryName(it.country_name) } ?: stringResource(R.string.Select_Your_Country),
                         onValueChange = {},
                         label = { Text(stringResource(R.string.Country)) },
                         readOnly = true,
@@ -474,7 +477,7 @@ fun FeedbackDialog(isDarkMode: Boolean, categories: List<Category>, countries: L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<Country>, viewModel: NewsFeedViewModel = viewModel(), onDismiss: () -> Unit) {
+fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, pqrstypes: List<PQRS_types>, viewModel: NewsFeedViewModel = viewModel(), onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var URL by remember { mutableStateOf("") }
     var Author_type by remember{ mutableStateOf("") }
@@ -489,11 +492,8 @@ fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
 
 
-    var expandedcategory by remember { mutableStateOf(false) }
-
-    var expandedcountry by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var selectedCountry by remember { mutableStateOf<Country?>(null) }
+    var expandedpqrstype by remember { mutableStateOf(false) }
+    var selectedpqrstype by remember { mutableStateOf<PQRS_types?>(null) }
 
 
 
@@ -515,31 +515,31 @@ fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<
 
                 // Dropdown menu for categories
                 ExposedDropdownMenuBox(
-                    expanded = expandedcategory,
-                    onExpandedChange = { expandedcategory = !expandedcategory }
+                    expanded = expandedpqrstype,
+                    onExpandedChange = { expandedpqrstype = !expandedpqrstype }
                 ) {
                     OutlinedTextField(
-                        value = selectedCategory?.name ?: stringResource(R.string.Select_a_type),
+                        value =  selectedpqrstype?.let { getTranslatedPQRStypeame(it.name) } ?: stringResource(R.string.Select_a_type),
                         onValueChange = {},
                         readOnly = true,
                         label = {Text(stringResource(R.string.Type)) },
                         trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedcategory)
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedpqrstype)
                         },
                         modifier = Modifier
                             .menuAnchor()
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(
-                        expanded = expandedcategory,
-                        onDismissRequest = { expandedcategory = false }
+                        expanded = expandedpqrstype,
+                        onDismissRequest = { expandedpqrstype = false }
                     ) {
-                        categories.forEach { category ->
+                        pqrstypes.forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(getTranslatedCategoryName(category.name)) },
+                                text = { Text(getTranslatedPQRStypeame(type.name)) },
                                 onClick = {
-                                    selectedCategory = category
-                                    expandedcategory = false
+                                    selectedpqrstype = type
+                                    expandedpqrstype = false
                                 }
                             )
                         }
@@ -552,7 +552,7 @@ fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = Description,
-                    onValueChange = { URL = it },
+                    onValueChange = { Description = it },
                     label = { Text(stringResource(R.string.Description)) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -573,14 +573,13 @@ fun PQRsDialog(isDarkMode: Boolean, categories: List<Category>, countries: List<
 
 
                             // Handle submission logic here
-                            viewModel.AddNews(
+                            viewModel.AddPQRS(
 
-                                URL,
+                                description = Description  ,
 
 
 
-                                selectedCategory!!.category_id,
-                                selectedCountry!!.id,
+                                selectedpqrstype!!.id,
 
                                 onSuccess = {
                                     showSuccessSnackbar = true
@@ -870,7 +869,7 @@ fun FeedHeader(
             )
         }
     }
-    
+
     Divider(
         modifier = Modifier.padding(vertical = 8.dp),
         color = dividerColor
