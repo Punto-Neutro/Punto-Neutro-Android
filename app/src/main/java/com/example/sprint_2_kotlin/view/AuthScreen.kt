@@ -303,7 +303,7 @@ fun AuthScreen(
                         onExpandedChange = { expanded = !expanded }
                     ) {
                         OutlinedTextField(
-                            value = selectedCountry?.country_name?: stringResource(R.string.Select_Your_Country) ,
+                            value =  selectedCountry?.let { getTranslatedCountryName(it.country_name) } ?: stringResource(R.string.Select_Your_Country) ,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = {

@@ -125,6 +125,14 @@
     <string name="By_scope">By scope</string>
     <string name="Local">Local</string>
     <string name="International">International</string>
+    <string name="Submit_a_request">Submit a request</string>
+    <string name="Type">type</string>
+    <string name="Description">Description</string>
+    <string name="Select_a_type">Select a type</string>
+    <string name="petition">petition</string>
+    <string name="claim">claim</string>
+    <string name="suggestion">suggestion</string>
+    <string name="complaint">complaint</string>
 
 
 

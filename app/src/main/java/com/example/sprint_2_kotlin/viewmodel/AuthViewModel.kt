@@ -27,8 +27,12 @@ class AuthViewModel(
     private val dao = AppDatabase.getDatabase(application).CommentDao()
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
 
+    private val daopqrs = AppDatabase.getDatabase(application).PQRSDao()
+    private val daopqrstypes = AppDatabase.getDatabase(application).PQRS_typesDao()
+
+
     // Repository for authentication
-    private val repository = Repository(application.applicationContext, dao, daonews)
+    private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daopqrstypes)
 
     // Session Manager for persistent login
     private val sessionManager = SessionManager(application.applicationContext)
