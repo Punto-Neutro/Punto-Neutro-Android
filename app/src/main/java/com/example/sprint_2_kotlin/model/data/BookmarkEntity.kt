@@ -2,6 +2,7 @@ package com.example.sprint_2_kotlin.model.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /**
  * Entity for storing bookmarks locally (Local-First)
@@ -9,8 +10,8 @@ import androidx.room.PrimaryKey
  * Includes sync status for eventual connectivity to Supabase
  */
 @Entity(tableName = "bookmarks")
+@Serializable
 data class BookmarkEntity(
-    @PrimaryKey
     val newsItemId: Int,              // ID of the bookmarked news item
 
     // Denormalized data for offline display
@@ -18,14 +19,18 @@ data class BookmarkEntity(
     val shortDescription: String,     // Short description
     val imageUrl: String,             // Image URL for thumbnail
     val categoryId: Int,              // Category ID
+    val userid: Int,                  // User ID
 
     // Timestamps
-    val bookmarkedAt: Long,           // When it was bookmarked (milliseconds since epoch)
+
+    val bookmarkedAt: Long? = null,           // When it was bookmarked (milliseconds since epoch)
 
     // Sync status for eventual connectivity
     val isSynced: Boolean = false,    // false = pending sync to Supabase
-    val lastSyncAttempt: Long? = null, // Last time sync was attempted
-    val syncRetries: Int = 0          // Number of failed sync attempts
+    val lastSyncAttempt: Long = 0, // Last time sync was attempted
+    val syncRetries: Int = 0,
+
+    @PrimaryKey (autoGenerate = true) val bookmark_id: Int = 0,// Number of failed sync attempts
 )
 
 /**
@@ -33,12 +38,16 @@ data class BookmarkEntity(
  */
 fun NewsItem.toBookmarkEntity(): BookmarkEntity {
     return BookmarkEntity(
+
         newsItemId = this.news_item_id,
         title = this.title,
         shortDescription = this.short_description,
         imageUrl = this.image_url,
         categoryId = this.category_id,
+        userid = this.user_profile_id,
         bookmarkedAt = System.currentTimeMillis(),
-        isSynced = false
+        isSynced = false,
+        bookmark_id = 0
+
     )
 }

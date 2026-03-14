@@ -5,17 +5,16 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.*
+import com.example.sprint_2_kotlin.model.repository.Repository
 import utils.NetworkMonitor
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.auth.Auth
-import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 
 class BookmarkViewModel(
     application: Application
@@ -24,10 +23,21 @@ class BookmarkViewModel(
     private val bookmarkDao = AppDatabase.getDatabase(application).bookmarkDao()
     private val networkMonitor = NetworkMonitor(application)
 
+    // Database DAOs
+    private val dao = AppDatabase.getDatabase(application).CommentDao()
+    private val daonews = AppDatabase.getDatabase(application).newsItemDao()
+
+    private val daopqrs = AppDatabase.getDatabase(application).PQRSDao()
+    private val daopqrstypes = AppDatabase.getDatabase(application).PQRS_typesDao()
+
+
+    private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daopqrstypes)
+
+
     // Supabase client (same configuration as Repository)
     private val supabaseClient = createSupabaseClient(
-        supabaseUrl = "https://oikdnxujjmkbewdhpyor.supabase.co",
-        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pa2RueHVqam1rYmV3ZGhweW9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MDU0MjksImV4cCI6MjA3NDk4MTQyOX0.htw3cdc-wFcBjKKPP4aEC9K9xBEnvPULMToP_PIuaLI"
+        supabaseUrl = "https://fyotaxqfpgbkyefapzya.supabase.co",
+        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5b3RheHFmcGdia3llZmFwenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MDMxNDIsImV4cCI6MjA4NzM3OTE0Mn0.Hvb--I3VLCkkhXAbMUaUC-O2SKbV9JyyUjFc3dmmxjU"
     ) {
         install(Postgrest)
         install(Auth)
@@ -41,6 +51,8 @@ class BookmarkViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+
 
     val bookmarkCount: StateFlow<Int> = bookmarkDao
         .getBookmarkCount()
@@ -86,35 +98,6 @@ class BookmarkViewModel(
      * Get current user's profile ID from Supabase
      * Same logic as Repository.kt
      */
-    private suspend fun getCurrentUserProfileId(): Int? {
-        return try {
-            val user = supabaseClient.auth.currentUserOrNull()?.id
-            if (user == null) {
-                Log.w(TAG, "No authenticated user found")
-                return null
-            }
-
-            val response = supabaseClient.from("user_profiles").select {
-                filter {
-                    eq("user_auth_id", user)
-                }
-            }
-            val profiles = response.decodeList<UserProfile>()
-
-            if (profiles.isEmpty()) {
-                Log.w(TAG, "No user profile found for auth_id: $user")
-                return null
-            }
-
-            val userProfileId = profiles.first().user_profile_id
-            Log.d(TAG, "Current user profile ID: $userProfileId")
-            userProfileId
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting user profile ID", e)
-            null
-        }
-    }
 
     // ========== LOCAL-FIRST OPERATIONS ==========
 
@@ -122,7 +105,9 @@ class BookmarkViewModel(
      * Check if a news item is bookmarked
      */
     suspend fun isBookmarked(newsItemId: Int): Boolean = withContext(Dispatchers.IO) {
-        bookmarkDao.isBookmarked(newsItemId)
+        val userid = repository.getCurrentUserProfileId()
+
+        bookmarkDao.isBookmarked(newsItemId,userid)
     }
 
     /**
@@ -131,10 +116,12 @@ class BookmarkViewModel(
     fun toggleBookmark(newsItem: NewsItem) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val isCurrentlyBookmarked = bookmarkDao.isBookmarked(newsItem.news_item_id)
+                val userid = repository.getCurrentUserProfileId()
+
+                val isCurrentlyBookmarked = bookmarkDao.isBookmarked(newsItem.news_item_id,userid)
 
                 if (isCurrentlyBookmarked) {
-                    removeBookmark(newsItem.news_item_id)
+                    removeBookmark(newsItem.news_item_id, newsItem.category_id, userid, newsItem.short_description, newsItem.image_url)
                 } else {
                     addBookmark(newsItem)
                 }
@@ -152,7 +139,11 @@ class BookmarkViewModel(
 
         val syncOperation = BookmarkSyncQueueEntity(
             newsItemId = newsItem.news_item_id,
-            operationType = BookmarkSyncQueueEntity.OperationType.ADD
+            operationType = BookmarkSyncQueueEntity.OperationType.ADD,
+            categoryId = newsItem.category_id,
+            userId = newsItem.user_profile_id,
+            shortDescription = newsItem.short_description,
+            imageUrl = newsItem.image_url
         )
 
         // Save locally FIRST (Local-First principle)
@@ -167,10 +158,15 @@ class BookmarkViewModel(
     /**
      * Remove bookmark (Local-First)
      */
-    private suspend fun removeBookmark(newsItemId: Int) {
+    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: Int?, shortDescription: String, imageUrl: String) {
         val syncOperation = BookmarkSyncQueueEntity(
             newsItemId = newsItemId,
-            operationType = BookmarkSyncQueueEntity.OperationType.REMOVE
+            operationType = BookmarkSyncQueueEntity.OperationType.REMOVE,
+            categoryId = categoryId,
+            userId = userId,
+            shortDescription = shortDescription,
+            imageUrl = imageUrl
+
         )
 
         // Remove locally FIRST (Local-First principle)
@@ -195,7 +191,12 @@ class BookmarkViewModel(
                 allBookmarks.forEach { bookmark ->
                     val syncOperation = BookmarkSyncQueueEntity(
                         newsItemId = bookmark.newsItemId,
-                        operationType = BookmarkSyncQueueEntity.OperationType.REMOVE
+                        operationType = BookmarkSyncQueueEntity.OperationType.REMOVE,
+                        categoryId = bookmark.categoryId,
+                        userId = bookmark.userid,
+                        shortDescription = bookmark.shortDescription,
+                        imageUrl = bookmark.imageUrl
+
                     )
                     bookmarkDao.insertSyncOperation(syncOperation)
                 }
@@ -261,7 +262,7 @@ class BookmarkViewModel(
 
             when (operation.operationType) {
                 BookmarkSyncQueueEntity.OperationType.ADD -> {
-                    syncAddToSupabase(operation.newsItemId)
+                    syncAddToSupabase(operation.newsItemId,operation.categoryId,operation.imageUrl,operation.shortDescription,operation.imageUrl)
                 }
                 BookmarkSyncQueueEntity.OperationType.REMOVE -> {
                     syncRemoveFromSupabase(operation.newsItemId)
@@ -318,24 +319,20 @@ class BookmarkViewModel(
     /**
      * Sync ADD to Supabase
      */
-    private suspend fun syncAddToSupabase(newsItemId: Int) {
-        val userProfileId = getCurrentUserProfileId()
+    private suspend fun syncAddToSupabase(newsItemId: Int,categoryId: Int,imageUrl: String,shortDescription: String,title: String) {
+        val userProfileId = repository.getCurrentUserProfileId()
         if (userProfileId == null) {
             Log.e(TAG, "Cannot sync: user not authenticated")
             throw Exception("User not authenticated")
         }
 
-        // ✅ CORREGIDO: Usar JSON String en lugar de Map
-        val jsonBody = """
-        {
-            "user_profile_id": $userProfileId,
-            "news_item_id": $newsItemId,
-            "is_deleted": false
-        }
-    """.trimIndent()
 
-        supabaseClient.from("bookmarks")
-            .insert(jsonBody)
+
+        repository.addBookmarks(userProfileId, newsItemId,imageUrl,title,categoryId,shortDescription)
+
+
+
+
 
         Log.d(TAG, "Bookmark added to Supabase: newsItemId=$newsItemId, userId=$userProfileId")
     }
@@ -344,7 +341,7 @@ class BookmarkViewModel(
      * Sync REMOVE from Supabase
      */
     private suspend fun syncRemoveFromSupabase(newsItemId: Int) {
-        val userProfileId = getCurrentUserProfileId()
+        val userProfileId = repository.getCurrentUserProfileId()
         if (userProfileId == null) {
             Log.e(TAG, "Cannot sync: user not authenticated")
             throw Exception("User not authenticated")
@@ -357,14 +354,9 @@ class BookmarkViewModel(
         }
     """.trimIndent()
 
-        supabaseClient.from("bookmarks")
-            .update(jsonBody) {
-                filter {
-                    eq("user_profile_id", userProfileId)
-                    eq("news_item_id", newsItemId)
-                    eq("is_deleted", false)
-                }
-            }
+        repository.deleteBookmark( newsItemId)
+
+
 
         Log.d(TAG, "Bookmark removed from Supabase: newsItemId=$newsItemId, userId=$userProfileId")
     }

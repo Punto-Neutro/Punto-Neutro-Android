@@ -223,6 +223,7 @@ fun SyncStatusBanner(
 @Composable
 fun BookmarkCard(
     bookmark: BookmarkEntity,
+
     isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
@@ -296,11 +297,6 @@ fun BookmarkCard(
                         fontWeight = FontWeight.Medium
                     )
 
-                    Text(
-                        text = getRelativeTime(bookmark.bookmarkedAt),
-                        fontSize = 11.sp,
-                        color = secondaryTextColor
-                    )
                 }
             }
         }
