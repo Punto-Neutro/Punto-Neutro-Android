@@ -106,8 +106,9 @@ class BookmarkViewModel(
      */
     suspend fun isBookmarked(newsItemId: Int): Boolean = withContext(Dispatchers.IO) {
         val userid = repository.getCurrentUserProfileId()
-
-        bookmarkDao.isBookmarked(newsItemId,userid)
+        val boolean = bookmarkDao.isBookmarked(newsItemId,userid)
+        Log.d(TAG, "isBookmarked: $boolean")
+        return@withContext boolean
     }
 
     /**
@@ -130,6 +131,10 @@ class BookmarkViewModel(
             }
         }
     }
+
+
+
+
 
     /**
      * Add bookmark (Local-First)

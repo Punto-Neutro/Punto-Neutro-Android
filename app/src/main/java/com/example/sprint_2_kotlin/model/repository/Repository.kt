@@ -1397,6 +1397,40 @@ suspend fun extractAuthorInstitution(url: String): String? {
 
     }
 
+    suspend fun getBookmarks(forcedrefresh: Boolean): List<BookmarkEntity> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                bookmarksDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+
+            val userid: Int? = getCurrentUserProfileId()
+
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["bookmarks"].select(){filter{
+                userid?.let { eq("userid", it) }
+            }}
+            val bookmarks = response.decodeList<BookmarkEntity>()
+
+            // Save the fetched categories into the cache
+            if (bookmarks.isNotEmpty()) {
+                bookmarksDao.insertAll(bookmarks)
+                Log.d(TAG, "PQRS  loaded from Supabase and cached: ${bookmarks.size}")
+            } else {
+                Log.d(TAG, "No countries found on Supabase.")
+            }
+
+            bookmarks
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading bookmarks, attempting to use cache", e)
+            emptyList()
+            // In case of a network error, still try to return from cache as a fallback
+        }
+    }
+
+
     //========================================================
     // User functions
     //========================================================
