@@ -2,6 +2,7 @@ package com.example.sprint_2_kotlin.viewmodel
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.foundation.layout.size
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.data.*
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.collections.take
 
 class BookmarkViewModel(
     application: Application
@@ -32,6 +34,17 @@ class BookmarkViewModel(
 
 
     private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daopqrstypes)
+
+    private var currentOffset = 0
+    private val PAGE_SIZE = 20
+    private var isLastPage = false
+
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+
+
 
 
     // Supabase client (same configuration as Repository)
@@ -52,6 +65,13 @@ class BookmarkViewModel(
             initialValue = emptyList()
         )
 
+
+    // 1. Add a state for the visible paginated items
+    private val _paginatedBookmarks = MutableStateFlow<List<BookmarkEntity>>(emptyList())
+    val paginatedBookmarks: StateFlow<List<BookmarkEntity>> = _paginatedBookmarks.asStateFlow()
+
+    // 2. We need to know the full list from the DB to "paginate" locally first
+    private var allLocalBookmarks = listOf<BookmarkEntity>()
 
 
     val bookmarkCount: StateFlow<Int> = bookmarkDao
@@ -84,11 +104,21 @@ class BookmarkViewModel(
     init {
         // Auto-sync when connection is restored
         viewModelScope.launch {
+
+            loadBookmarks(false)
             isConnected
                 .filter { it } // Only when connected
                 .collect {
                     syncPendingOperations()
                 }
+        }
+
+        viewModelScope.launch {
+            bookmarkDao.getAllBookmarks().collect {
+                allLocalBookmarks = it
+                // When the DB changes, refresh the first page of the visible list
+                refreshPaginatedList()
+            }
         }
     }
 
@@ -122,7 +152,7 @@ class BookmarkViewModel(
                 val isCurrentlyBookmarked = bookmarkDao.isBookmarked(newsItem.news_item_id,userid)
 
                 if (isCurrentlyBookmarked) {
-                    removeBookmark(newsItem.news_item_id, newsItem.category_id, userid, newsItem.short_description, newsItem.image_url)
+                    removeBookmark(newsItem.news_item_id, newsItem.category_id, userid, newsItem.short_description, newsItem.image_url, newsItem.title)
                 } else {
                     addBookmark(newsItem)
                 }
@@ -148,7 +178,8 @@ class BookmarkViewModel(
             categoryId = newsItem.category_id,
             userId = newsItem.user_profile_id,
             shortDescription = newsItem.short_description,
-            imageUrl = newsItem.image_url
+            imageUrl = newsItem.image_url,
+            title = newsItem.title
         )
 
         // Save locally FIRST (Local-First principle)
@@ -163,14 +194,15 @@ class BookmarkViewModel(
     /**
      * Remove bookmark (Local-First)
      */
-    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: Int?, shortDescription: String, imageUrl: String) {
+    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: Int?, shortDescription: String, imageUrl: String, title: String) {
         val syncOperation = BookmarkSyncQueueEntity(
             newsItemId = newsItemId,
             operationType = BookmarkSyncQueueEntity.OperationType.REMOVE,
             categoryId = categoryId,
             userId = userId,
             shortDescription = shortDescription,
-            imageUrl = imageUrl
+            imageUrl = imageUrl,
+            title = title
 
         )
 
@@ -200,7 +232,8 @@ class BookmarkViewModel(
                         categoryId = bookmark.categoryId,
                         userId = bookmark.userid,
                         shortDescription = bookmark.shortDescription,
-                        imageUrl = bookmark.imageUrl
+                        imageUrl = bookmark.imageUrl,
+                        title = bookmark.title
 
                     )
                     bookmarkDao.insertSyncOperation(syncOperation)
@@ -267,7 +300,7 @@ class BookmarkViewModel(
 
             when (operation.operationType) {
                 BookmarkSyncQueueEntity.OperationType.ADD -> {
-                    syncAddToSupabase(operation.newsItemId,operation.categoryId,operation.imageUrl,operation.shortDescription,operation.imageUrl)
+                    syncAddToSupabase(operation.newsItemId,operation.categoryId,operation.imageUrl,operation.shortDescription,operation.title)
                 }
                 BookmarkSyncQueueEntity.OperationType.REMOVE -> {
                     syncRemoveFromSupabase(operation.newsItemId)
@@ -333,7 +366,7 @@ class BookmarkViewModel(
 
 
 
-        repository.addBookmarks(userProfileId, newsItemId,imageUrl,title,categoryId,shortDescription)
+        repository.addBookmarks(userProfileId, newsItemId,imageUrl, title,categoryId,shortDescription)
 
 
 
@@ -376,4 +409,83 @@ class BookmarkViewModel(
     companion object {
         private const val TAG = "BookmarkViewModel"
     }
+
+    //===============================================================
+    // Pagination
+    // ===============================================================
+
+    private fun refreshPaginatedList() {
+        currentOffset = 0
+        isLastPage = false
+        // Take the first chunk from the local DB
+        _paginatedBookmarks.value = allLocalBookmarks.take(PAGE_SIZE)
+        currentOffset = _paginatedBookmarks.value.size
+    }
+
+
+
+
+
+    fun loadNextPage() {
+        if (_isLoading.value || isLastPage) return
+
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            // Strategy: First try to load more from the local Room list
+            if (currentOffset < allLocalBookmarks.size) {
+                val nextChunk = allLocalBookmarks.drop(currentOffset).take(PAGE_SIZE)
+                _paginatedBookmarks.value = _paginatedBookmarks.value + nextChunk
+                currentOffset += nextChunk.size
+                _isLoading.value = false
+            }
+            // If local is exhausted, fetch from Supabase
+            else if (isConnected.value) {
+                try {
+                    // You'll need to implement getBookmarks in your Repository
+                    // similar to getNewsItems but for the 'bookmarks' table
+                    val remoteBookmarks = repository.getBookmarks(
+                        forcedrefresh = false,
+                        pageSize = PAGE_SIZE,
+                        startRow = currentOffset
+                    )
+
+                    if (remoteBookmarks.isNotEmpty()) {
+                        // Update currentOffset and check if it's the last page
+                        currentOffset += remoteBookmarks.size
+                        isLastPage = remoteBookmarks.size < PAGE_SIZE
+
+                        // Note: Usually, remote bookmarks should be saved to Room,
+                        // which triggers the collector above and updates the UI.
+                    } else {
+                        isLastPage = true
+                    }
+                } catch (e: Exception) {
+                    Log.e("BookmarkVM", "Error fetching remote bookmarks", e)
+                } finally {
+                    _isLoading.value = false
+                }
+            } else {
+                _isLoading.value = false
+                isLastPage = true // No internet and no more local items
+            }
+        }
+    }
+
+    private fun loadBookmarks(forcedRefresh: Boolean) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Loading Bookmarks...")
+                val BookmarksList = repository.getBookmarks(forcedRefresh )
+
+                Log.d(TAG, "Bookmarks loaded: ${BookmarksList.size}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading Bookmarks", e)
+
+            }
+        }
+    }
+
+
+
 }

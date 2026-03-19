@@ -21,7 +21,7 @@ import androidx.room.RoomDatabase
         PQRS::class,
         PQRS_types::class
     ],
-    version = 12,  // update: Incrementado de 3 a 4
+    version = 13,  // update: Incrementado de 3 a 4
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

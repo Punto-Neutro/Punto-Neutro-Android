@@ -1038,16 +1038,21 @@ suspend fun extractImageUrlFromArticle(url: String): String? {
                 return@withContext firstImage
             }
 
-            // If no image is found
-            Log.w("ImageExtractor", "Could not find a main image for URL: $url")
-            null
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
 
         } catch (e: IOException) {
-            Log.e("ImageExtractor", "Error fetching URL: $url", e)
-            null
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
         } catch (e: Exception) {
-            Log.e("ImageExtractor", "An unexpected error occurred", e)
-            null
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
         }
     }
 }
@@ -1397,7 +1402,9 @@ suspend fun extractAuthorInstitution(url: String): String? {
 
     }
 
-    suspend fun getBookmarks(forcedrefresh: Boolean): List<BookmarkEntity> = withContext(Dispatchers.IO) {
+    suspend fun getBookmarks(forcedrefresh: Boolean
+                             ,pageSize: Int = 20,
+                             startRow: Int = 0,): List<BookmarkEntity> = withContext(Dispatchers.IO) {
         try {
             if (forcedrefresh){
                 bookmarksDao.deleteAll()
@@ -1409,17 +1416,22 @@ suspend fun extractAuthorInstitution(url: String): String? {
 
             // If cache is empty, fetch from Supabase
             Log.d(TAG, "Fetching Countries from Supabase...")
-            val response = client.postgrest["bookmarks"].select(){filter{
-                userid?.let { eq("userid", it) }
+            val response = client.postgrest["bookmarks"].select(
+
+            ){  order("created_at", order = Order.DESCENDING)
+                range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+                filter{
+                userid?.let { eq("userid", it)
+                }
             }}
             val bookmarks = response.decodeList<BookmarkEntity>()
 
             // Save the fetched categories into the cache
             if (bookmarks.isNotEmpty()) {
                 bookmarksDao.insertAll(bookmarks)
-                Log.d(TAG, "PQRS  loaded from Supabase and cached: ${bookmarks.size}")
+                Log.d(TAG, "Bookmarks  loaded from Supabase and cached: ${bookmarks.size}")
             } else {
-                Log.d(TAG, "No countries found on Supabase.")
+                Log.d(TAG, "No Bookmarks found on Supabase.")
             }
 
             bookmarks

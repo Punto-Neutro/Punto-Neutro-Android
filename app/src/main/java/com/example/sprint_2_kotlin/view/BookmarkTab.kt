@@ -344,12 +344,12 @@ private fun getCategoryName(categoryId: Int): String {
     return when (categoryId) {
         1 -> "Politics"
         2 -> "Sports"
-        3 -> "Technology"
-        4 -> "Entertainment"
-        5 -> "Science"
-        6 -> "Health"
-        7 -> "Business"
-        8 -> "Local"
+        3 -> "Science"
+        4 -> "Economics"
+        5 -> "Entertainment"
+        6 -> "Climate"
+        7 -> "Technology"
+        8 -> "Health"
         else -> "Other"
     }
 }

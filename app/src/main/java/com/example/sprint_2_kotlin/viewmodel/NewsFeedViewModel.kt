@@ -176,7 +176,6 @@ class NewsFeedViewModel(
         loadNewsItems()
         loadCountries(false)
         loadPQRStypes(forcedRefresh = false)
-        loadBookmarks(true)
 
     }
 
@@ -792,19 +791,7 @@ class NewsFeedViewModel(
     }
 
 
-    private fun loadBookmarks(forcedRefresh: Boolean) {
-        viewModelScope.launch {
-            try {
-                Log.d(TAG, "Loading Bookmarks...")
-                val BookmarksList = repository.getBookmarks(forcedRefresh )
 
-                Log.d(TAG, "Bookmarks loaded: ${BookmarksList.size}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading Bookmarks", e)
-
-            }
-        }
-    }
 
 
 }

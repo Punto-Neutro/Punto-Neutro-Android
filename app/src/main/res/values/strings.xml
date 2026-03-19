@@ -23,7 +23,7 @@
     <string name="Anonymous_User">Anonymous User</string>
     <string name="Active_session">Active session</string>
     <string name="Admin_analytics">Admin analytics</string>
-    <string name="Articles_read">Articles read</string>
+    <string name="Articles_read">Articles read recently</string>
 
     <string name="Comments_submitted">Comments submitted</string>
     <string name="Bookmarks">Bookmarks</string>
