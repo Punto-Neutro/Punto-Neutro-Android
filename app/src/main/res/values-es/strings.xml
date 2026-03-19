@@ -24,7 +24,7 @@
     <string name="Anonymous_User">Usuario anónimo</string>
     <string name="Active_session">Sesión activa</string>
     <string name="Admin_analytics">Análitica de administrador</string>
-    <string name="Articles_read">Artículos leídos</string>
+    <string name="Articles_read">Artículos leídos recientemente</string>
     <string name="Comments_submitted">Comentarios subidos </string>
     <string name="Bookmarks">Guardados</string>
     <string name="Day_streak">Dias de racha</string>

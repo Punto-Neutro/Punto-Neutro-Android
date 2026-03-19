@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.colorspace.connect
 
 import com.example.sprint_2_kotlin.model.data.*
+import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
@@ -61,6 +62,9 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     private val categoryDao = database.categoryDao()
 
     private val countryDao = database.countryDao()
+
+    private val bookmarksDao = database.bookmarkDao()
+
 
     // Cache expiration time: 30 minutes in milliseconds
     private val CACHE_EXPIRATION_TIME = 30 * 60 * 1000L
@@ -1034,16 +1038,21 @@ suspend fun extractImageUrlFromArticle(url: String): String? {
                 return@withContext firstImage
             }
 
-            // If no image is found
-            Log.w("ImageExtractor", "Could not find a main image for URL: $url")
-            null
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
 
         } catch (e: IOException) {
-            Log.e("ImageExtractor", "Error fetching URL: $url", e)
-            null
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
         } catch (e: Exception) {
-            Log.e("ImageExtractor", "An unexpected error occurred", e)
-            null
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
         }
     }
 }
@@ -1307,6 +1316,169 @@ suspend fun extractAuthorInstitution(url: String): String? {
             return 0 // General failure
         }
     }
+
+    //========================================================
+    // Bookmark functions
+    //========================================================
+
+    suspend fun addBookmarks(user_id: Int, news_item_id: Int,image_url: String,title: String,category_id: Int,short_description: String): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+                val datos = BookmarkEntity(
+                    newsItemId = news_item_id,
+                    imageUrl = image_url,
+                    title = title,
+                    categoryId = category_id,
+                    shortDescription = short_description,
+                    userid = userProfileIdActual,
+                )
+
+                val answer = client.from("bookmarks").insert(listOf(datos)) {}
+
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            bookmarksDao.insertBookmark(BookmarkEntity(userid = 0, shortDescription = short_description, newsItemId = news_item_id, imageUrl = image_url, title = title, categoryId = category_id ))
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun deleteBookmark(news_item_id: Int): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+
+
+                client.from("bookmarks").delete {
+                    filter {
+                        eq("userid", userProfileIdActual)
+                        eq("newsItemId", news_item_id)
+                    }
+                }
+
+                bookmarksDao.deleteBookmarkById(news_item_id)
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            bookmarksDao.deleteBookmarkById(news_item_id)
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun getBookmarks(forcedrefresh: Boolean
+                             ,pageSize: Int = 20,
+                             startRow: Int = 0,): List<BookmarkEntity> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                bookmarksDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+
+            val userid: Int? = getCurrentUserProfileId()
+
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["bookmarks"].select(
+
+            ){  order("created_at", order = Order.DESCENDING)
+                range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+                filter{
+                userid?.let { eq("userid", it)
+                }
+            }}
+            val bookmarks = response.decodeList<BookmarkEntity>()
+
+            // Save the fetched categories into the cache
+            if (bookmarks.isNotEmpty()) {
+                bookmarksDao.insertAll(bookmarks)
+                Log.d(TAG, "Bookmarks  loaded from Supabase and cached: ${bookmarks.size}")
+            } else {
+                Log.d(TAG, "No Bookmarks found on Supabase.")
+            }
+
+            bookmarks
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading bookmarks, attempting to use cache", e)
+            emptyList()
+            // In case of a network error, still try to return from cache as a fallback
+        }
+    }
+
+
+    //========================================================
+    // User functions
+    //========================================================
+
+    suspend fun getCurrentUserProfileId(): Int? {
+        return try {
+            val user = client.auth.currentUserOrNull()?.id
+            if (user == null) {
+                Log.w(TAG, "No authenticated user found")
+                return null
+            }
+
+            val response = client.from("user_profiles").select {
+                filter {
+                    eq("user_auth_id", user)
+                }
+            }
+            val profiles = response.decodeList<UserProfile>()
+
+            if (profiles.isEmpty()) {
+                Log.w(TAG, "No user profile found for auth_id: $user")
+                return null
+            }
+
+            val userProfileId = profiles.first().user_profile_id
+            Log.d(TAG, "Current user profile ID: $userProfileId")
+            userProfileId
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user profile ID", e)
+            null
+        }
+    }
+
+
+
 
 
 

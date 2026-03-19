@@ -1,5 +1,6 @@
 package com.example.sprint_2_kotlin.view
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -73,9 +74,11 @@ fun NewsItemDetailScreen(
     //  Estado del bookmark
     var isBookmarked by remember { mutableStateOf(false) }
 
-    LaunchedEffect(newsItemId) {
-        currentItem?.let {
-            isBookmarked = bookmarkViewModel.isBookmarked(newsItemId)
+    LaunchedEffect(currentItem) {
+        // Only proceed if currentItem is no longer null
+        currentItem?.let { item ->
+            Log.d("NewsDetail", "Checking bookmark for item: ${item.news_item_id}")
+            isBookmarked = bookmarkViewModel.isBookmarked(item.news_item_id)
         }
     }
 

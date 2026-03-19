@@ -664,7 +664,6 @@ fun StatisticsGrid(
         ) {
             StatCard(
                 icon = Icons.Default.Visibility,
-                value = "$readCount",
                 label = stringResource(R.string.Articles_read),
                 iconColor = Color(0xFF2196F3),
                 isDarkMode = isDarkMode,
@@ -672,36 +671,16 @@ fun StatisticsGrid(
                 onClick = onReadHistoryClick
             )
             StatCard(
-                icon = Icons.Default.Flag,
-                value = "12",
-                label = stringResource(R.string.Comments_submitted),
-                iconColor = Color(0xFFE53935),
-                isDarkMode = isDarkMode,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
                 icon = Icons.Default.Bookmark,
-                value = "$bookmarkCount",
                 label = stringResource(R.string.Bookmarks),
                 iconColor = Color(0xFFFFA726),
                 isDarkMode = isDarkMode,
                 modifier = Modifier.weight(1f),
                 onClick = onBookmarksClick
             )
-            StatCard(
-                icon = Icons.Default.TrendingUp,
-                value = "28",
-                label = stringResource(R.string.Day_streak),
-                iconColor = Color(0xFF9C27B0),
-                isDarkMode = isDarkMode,
-                modifier = Modifier.weight(1f)
-            )
+
         }
+
     }
 }
 
@@ -709,7 +688,6 @@ fun StatisticsGrid(
 @Composable
 fun StatCard(
     icon: ImageVector,
-    value: String,
     label: String,
     iconColor: Color,
     isDarkMode: Boolean = false,
@@ -740,12 +718,6 @@ fun StatCard(
                 modifier = Modifier.size(28.dp)
             )
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = value,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor
-            )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = label,

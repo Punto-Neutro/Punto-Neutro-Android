@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -28,19 +29,38 @@ fun BookmarksScreen(
     onNewsItemClick: (Int) -> Unit = {},
     viewModel: BookmarkViewModel = viewModel()
 ) {
-    val bookmarks by viewModel.bookmarks.collectAsState()
     val bookmarkCount by viewModel.bookmarkCount.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val pendingSyncCount by viewModel.pendingSyncCount.collectAsState()
     val syncStatus by viewModel.syncStatus.collectAsState()
 
-    var showClearDialog by remember { mutableStateOf(false) }
 
     // Colores dinámicos
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
     val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+
+    // 1. Use the new paginated state instead of the full list
+    val bookmarks by viewModel.paginatedBookmarks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // 2. Setup scroll state and "should load more" detector
+    val lazyListState = rememberLazyListState()
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
+                ?: return@derivedStateOf false
+            lastVisibleItem.index >= lazyListState.layoutInfo.totalItemsCount - 5
+        }
+    }
+
+    // 3. Trigger load more when needed
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && bookmarks.isNotEmpty()) {
+            viewModel.loadNextPage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -58,17 +78,6 @@ fun BookmarksScreen(
                             contentDescription = "Back",
                             tint = textColor
                         )
-                    }
-                },
-                actions = {
-                    if (bookmarkCount > 0) {
-                        IconButton(onClick = { showClearDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Clear all",
-                                tint = Color(0xFFE53935)
-                            )
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -104,6 +113,7 @@ fun BookmarksScreen(
                 }
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -126,42 +136,17 @@ fun BookmarksScreen(
                             onClick = { onNewsItemClick(bookmark.newsItemId) }
                         )
                     }
+                    if (isLoading) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Clear confirmation dialog
-    if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            icon = {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = Color(0xFFE53935)
-                )
-            },
-            title = { Text(stringResource(R.string.Clear_all_bookmarks)) },
-            text = { Text("${stringResource(R.string.This_will_remove_all)} $bookmarkCount ${stringResource(R.string.This_action_cannot_be_undone)}") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.clearAllBookmarks()
-                        showClearDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE53935)
-                    )
-                ) {
-                    Text(stringResource(R.string.Clear_all))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text(stringResource(R.string.Cancel))
-                }
-            }
-        )
-    }
+
 }

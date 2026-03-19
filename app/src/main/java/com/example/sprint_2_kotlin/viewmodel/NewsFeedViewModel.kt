@@ -176,6 +176,7 @@ class NewsFeedViewModel(
         loadNewsItems()
         loadCountries(false)
         loadPQRStypes(forcedRefresh = false)
+
     }
 
     // ============================================
@@ -788,6 +789,9 @@ class NewsFeedViewModel(
             }
         }
     }
+
+
+
 
 
 }
