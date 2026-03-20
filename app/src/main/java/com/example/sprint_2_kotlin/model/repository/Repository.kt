@@ -1521,6 +1521,41 @@ suspend fun extractAuthorInstitution(url: String): String? {
         }
     }
 
+    //============================================================
+    // Reset Password Functions
+    // ===========================================================
+
+    // In Repository.kt
+
+    /**
+     * Sends a reset password email to the user.
+     */
+    suspend fun sendResetPasswordEmail(email: String): Boolean {
+        return try {
+            auth.resetPasswordForEmail(email)
+            true
+        } catch (e: Exception) {
+            Log.e("Repository", "Error sending reset email", e)
+            false
+        }
+    }
+
+    /**
+     * Updates the password for the currently "sessioned" user
+     * (The user becomes sessioned after clicking the email link).
+     */
+    suspend fun updatePassword(newPassword: String): Boolean {
+        return try {
+            auth.updateUser {
+                password = newPassword
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("Repository", "Error updating password", e)
+            false
+        }
+    }
+
 
 
 

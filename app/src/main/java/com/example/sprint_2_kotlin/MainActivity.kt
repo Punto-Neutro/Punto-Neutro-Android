@@ -120,6 +120,9 @@ class MainActivity : AppCompatActivity() {
                                         navController.navigate("news_feed") {
                                             popUpTo("auth") { inclusive = true }
                                         }
+                                    },
+                                    onForgotPassword = {
+                                        navController.navigate("forgot_password")
                                     }
                                 )
                             }
@@ -228,6 +231,15 @@ class MainActivity : AppCompatActivity() {
                                         navController.navigate("news_item_detail/$newsItemId")
                                     },
                                     viewModel = bookmarkViewModel
+                                )
+                            }
+
+                            // Inside NavHost in MainActivity.kt
+                            composable(route = "forgot_password") {
+                                ForgotPasswordView( // Pass the dark mode state
+                                    onBackToLogin = {
+                                        navController.popBackStack()
+                                    }
                                 )
                             }
 

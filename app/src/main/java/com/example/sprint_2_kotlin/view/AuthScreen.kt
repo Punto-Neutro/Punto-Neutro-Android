@@ -4,6 +4,7 @@ import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,7 +42,8 @@ import utils.getTranslatedCountryName
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = viewModel(),
-    onLoginSuccess: () -> Unit = {}
+    onLoginSuccess: () -> Unit = {},
+    onForgotPassword: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     var isLoginMode by remember { mutableStateOf(true) }
@@ -424,10 +426,12 @@ fun AuthScreen(
                 if (isLoginMode) {
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { /* TODO: Implement forgot password */ }) {
-                        Text(
-                            text = stringResource(R.string.Forgot_Password),
-                            color = Color(0xFF666666),
-                            fontSize = 14.sp
+                        // Inside AuthScreen.kt
+                        Text(text = stringResource(R.string.Forgot_Password),
+                            modifier = Modifier
+                                .clickable { onForgotPassword() }, // Add navigation
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF000000)
                         )
                     }
                 }
