@@ -46,6 +46,7 @@ fun AuthScreen(
     val state by viewModel.uiState.collectAsState()
     var isLoginMode by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    var succesMessage by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -206,6 +207,7 @@ fun AuthScreen(
                         onClick = {
                             isLoginMode = true
                             errorMessage = ""
+                            succesMessage = ""
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -215,6 +217,7 @@ fun AuthScreen(
                         onClick = {
                             isLoginMode = false
                             errorMessage = ""
+                            succesMessage = ""
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -336,20 +339,24 @@ fun AuthScreen(
                 Spacer(Modifier.height(20.dp))
 
 
+
                 // Main Action Button negro
                 Button(
                     onClick = {
                         errorMessage = ""
+                        succesMessage = ""
                         if (isLoginMode) {
                             viewModel.login()
                         } else {
                             // Add a check to ensure a country is selected
-                            if (selectedCountry?.id != 0) { // Check for a valid ID, not 0
+                            if (selectedCountry?.id != null) { // Check for a valid ID, not 0
                                 viewModel.register(selectedCountry?.id ?: 0)
+                                succesMessage = "Register successful verify email before logging in"
+                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
                             } else {
-
                                 Log.d(TAG, "Selected country = ${selectedCountry?.id}")
                                 errorMessage = "Please select a country." // Show an error
+
                             }
                         }
                     },
@@ -447,6 +454,33 @@ fun AuthScreen(
                             Text(
                                 text = errorMessage,
                                 color = Color(0xFFD32F2F),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                if (succesMessage.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF90EE90)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mail,
+                                contentDescription = "Success",
+                                tint = Color(0xFF00913F),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = succesMessage,
+                                color = Color(0xFF00913F),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }

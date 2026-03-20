@@ -102,21 +102,65 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         }
     }
 
-    suspend fun signUp(email: String, password: String, country: Int): Boolean {
+
+
+    // In Repository.kt
+
+    // 1. Simplified SignUp: Just create the Auth account
+    suspend fun signUp(email: String, password: String): Boolean {
         return try {
             auth.signUpWith(Email) {
                 this.email = email
                 this.password = password
             }
-            val uid = auth.currentUserOrNull()?.id
-            val data = UserProfile(
-                uid,email,country
-            )
-            client.postgrest.from("user_profiles").insert(listOf(data))
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Sign up error", e)
+            false
+        }
+    }
+
+    /**
+     * Enhanced Sign In:
+     * 1. Authenticates the user.
+     * 2. Checks if a profile exists in 'user_profiles'.
+     * 3. If not, creates it (First time login flow).
+     */
+    suspend fun signInAndSyncProfile(email: String, password: String, countryId: Int): Boolean {
+        return try {
+            // Step 1: Attempt Login
+            auth.signInWith(Email) {
+                this.email = email
+                this.password = password
+            }
+
+            bookmarksDao.deleteAll()
+
+            // Step 2: Get the authenticated UID
+            val user = auth.currentUserOrNull() ?: return false
+            val uid = user.id
+
+            // Step 3: Check if profile exists
+            val response = client.from("user_profiles")
+                .select { filter { eq("user_auth_id", uid) } }
+
+            val profileList = response.decodeList<UserProfile>()
+
+            if (profileList.isEmpty()) {
+                // Step 4: Profile doesn't exist -> Create it now
+                // The user is already authenticated, so RLS will allow this insert
+                val newProfile = UserProfile(
+                    user_auth_id = uid,
+                    user_auth_email = email,
+                    country_id = if (countryId != 0) countryId else 183 // Default if missing
+                )
+                client.from("user_profiles").insert(newProfile)
+                Log.d(TAG, "First login detected. Profile created for $uid")
+            }
 
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "SignIn and Sync error: ${e.message}")
             false
         }
     }
