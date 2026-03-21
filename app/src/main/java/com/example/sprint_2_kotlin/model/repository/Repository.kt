@@ -5,6 +5,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.colorspace.connect
+import androidx.compose.ui.input.key.type
 
 import com.example.sprint_2_kotlin.model.data.*
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
@@ -14,6 +15,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.query.Order
@@ -26,6 +28,7 @@ import org.jsoup.Jsoup
 import java.io.IOException
 import kotlin.collections.forEachIndexed
 import kotlin.collections.map
+import kotlin.math.floor
 
 
 /**
@@ -92,7 +95,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     suspend fun signIn(email: String, password: String): Boolean {
         return try {
             auth.signInWith(Email) {
-                this.email = email
+                this.email = email.lowercase()
                 this.password = password
             }
             true
@@ -110,7 +113,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
     suspend fun signUp(email: String, password: String): Boolean {
         return try {
             auth.signUpWith(Email) {
-                this.email = email
+                this.email = email.lowercase()
                 this.password = password
             }
             true
@@ -130,7 +133,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
         return try {
             // Step 1: Attempt Login
             auth.signInWith(Email) {
-                this.email = email
+                this.email = email.lowercase()
                 this.password = password
             }
 
@@ -151,7 +154,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 // The user is already authenticated, so RLS will allow this insert
                 val newProfile = UserProfile(
                     user_auth_id = uid,
-                    user_auth_email = email,
+                    user_auth_email = email.lowercase(),
                     country_id = if (countryId != 0) countryId else 183 // Default if missing
                 )
                 client.from("user_profiles").insert(newProfile)
@@ -273,7 +276,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             val userProfileIdActual = profile.user_profile_id
 
             val scaledValue = rating * 100
-            val truncatedValue = kotlin.math.floor(scaledValue)
+            val truncatedValue = floor(scaledValue)
             val ratingf = truncatedValue / 100
 
             val datos = RatingItem(
@@ -324,7 +327,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             try {
 
                 val scaledValue = comment.reliabilityScore * 100
-                val truncatedValue = kotlin.math.floor(scaledValue)
+                val truncatedValue = floor(scaledValue)
                 val ratingf = truncatedValue / 100
                 val newsItemId = comment.newsItemId
 
@@ -344,7 +347,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 val newtotalRatings = totalRatings + 1
                 val newAverage = (totalRatings*averagereliabilityscore + ratingf)/newtotalRatings
                 val scaledValue1 = newAverage * 100
-                val truncatedValue1 = kotlin.math.floor(scaledValue1)
+                val truncatedValue1 = floor(scaledValue1)
                 val newAveragerounded = truncatedValue1 / 100
                 val response = client.from("news_items")
                     .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
@@ -538,7 +541,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             val newtotalRatings = totalRatings + 1
             val newAverage = (totalRatings*averagereliabilityscore + rating)/newtotalRatings
             val scaledValue = newAverage * 100
-            val truncatedValue = kotlin.math.floor(scaledValue)
+            val truncatedValue = floor(scaledValue)
             val newAveragerounded = truncatedValue / 100
             val response = client.from("news_items")
                 .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
@@ -1530,28 +1533,67 @@ suspend fun extractAuthorInstitution(url: String): String? {
     /**
      * Sends a reset password email to the user.
      */
-    suspend fun sendResetPasswordEmail(email: String): Boolean {
+    // In Repository.kt
+
+    /**
+     * Sends a reset password email only if the user exists in our database.
+     * Returns: 0 for Success, 1 for "User not found", 2 for General Error
+     */
+    suspend fun sendResetPasswordEmail(email: String): Int {
         return try {
+            // 1. First, check if the email exists in our user_profiles table
+            val response = client.from("user_profiles")
+                .select {
+                    filter {
+                        eq("user_auth_email", email.lowercase())
+                    }
+                }
+
+            val exists = response.decodeList<UserProfile>().isNotEmpty()
+
+            if (!exists) {
+                Log.w("Repository", "Reset attempt for non-existent email: $email")
+                return 1 // User not found
+            }
+
+            // 2. If user exists, trigger the Supabase Auth reset
             auth.resetPasswordForEmail(email)
+            0 // Success
+        } catch (e: Exception) {
+            Log.e("Repository", "Error during reset process", e)
+            2 // General Error
+        }
+    }
+
+    // In Repository.kt
+
+    /**
+     * Verifies the 6-digit OTP code sent to the email.
+     * This creates a recovery session.
+     */
+    suspend fun verifyResetToken(email: String, token: String): Boolean {
+        return try {
+            auth.verifyEmailOtp(
+                type = OtpType.Email.RECOVERY,
+                email = email,
+                token = token,
+            )
             true
         } catch (e: Exception) {
-            Log.e("Repository", "Error sending reset email", e)
+            Log.e(TAG, "OTP Verification failed", e)
             false
         }
     }
 
-    /**
-     * Updates the password for the currently "sessioned" user
-     * (The user becomes sessioned after clicking the email link).
-     */
     suspend fun updatePassword(newPassword: String): Boolean {
         return try {
-            auth.updateUser {
+            client.auth.updateUser {
                 password = newPassword
             }
+            client.auth.signOut() // Clear recovery session
             true
         } catch (e: Exception) {
-            Log.e("Repository", "Error updating password", e)
+            Log.e(TAG, "Update password failed", e)
             false
         }
     }

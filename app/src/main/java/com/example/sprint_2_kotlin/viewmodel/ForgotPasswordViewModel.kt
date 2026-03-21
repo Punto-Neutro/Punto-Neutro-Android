@@ -25,14 +25,33 @@ class ForgotPasswordViewModel(application: Application) : AndroidViewModel(appli
     fun onEmailChange(email: String) { _uiState.value = _uiState.value.copy(email = email) }
     fun onPasswordChange(pw: String) { _uiState.value = _uiState.value.copy(newPassword = pw) }
 
-    fun sendResetEmail() {
+
+    // State update functions (The ones that were missing!)
+    fun onOtpChange(value: String) { _uiState.value = _uiState.value.copy(otpToken = value) }
+
+
+
+    fun sendOtp() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val success = repository.sendResetPasswordEmail(_uiState.value.email)
-            _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    emailSent = success
-            )
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val exists = repository.sendResetPasswordEmail(_uiState.value.email) // Your existing check
+            if (exists == 0) {
+                _uiState.value = _uiState.value.copy(isLoading = false, phase = 2)
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = "Email not found")
+            }
+        }
+    }
+
+    fun verifyOtp() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val success = repository.verifyResetToken(_uiState.value.email, _uiState.value.otpToken)
+            if (success) {
+                _uiState.value = _uiState.value.copy(isLoading = false, phase = 3)
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false, errorMessage = "Invalid or expired token")
+            }
         }
     }
 
@@ -40,19 +59,21 @@ class ForgotPasswordViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val success = repository.updatePassword(_uiState.value.newPassword)
-            _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isResetSuccessful = success
-            )
+            if (success) {
+                _uiState.value = _uiState.value.copy(isLoading = false, phase = 4) // Success
+            }
         }
     }
 
     data class ForgotState(
-            val email: String = "",
-            val newPassword: String = "",
-            val isLoading: Boolean = false,
-            val emailSent: Boolean = false,
-            val isResetSuccessful: Boolean = false
+        val email: String = "",
+        val newPassword: String = "",
+        val isLoading: Boolean = false,
+        val emailSent: Boolean = false,
+        val isResetSuccessful: Boolean = false,
+        val errorMessage: String? = null, // Add this to show to the user
+        val phase: Int = 1, //
+        val otpToken: String = ""
     )
 }
 

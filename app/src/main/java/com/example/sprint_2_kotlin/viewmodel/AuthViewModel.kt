@@ -105,23 +105,23 @@ class AuthViewModel(
     }
 
     fun onEmailChange(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        _uiState.value = _uiState.value.copy(email = value,errorMessage = "")
     }
 
     fun onPasswordChange(value: String) {
-        _uiState.value = _uiState.value.copy(password = value)
+        _uiState.value = _uiState.value.copy(password = value,errorMessage = "")
     }
 
     // Add this function inside AuthViewModel
     fun onCountryChange(value: Int) {
-        _uiState.value = _uiState.value.copy(country = value)
+        _uiState.value = _uiState.value.copy(country = value,errorMessage = "")
     }
 
     // In AuthViewModel.kt
 
     fun register(countryId: Int) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
 
             // Save the country in state so we have it ready for the first login
             _uiState.value = _uiState.value.copy(country = countryId)
@@ -145,7 +145,7 @@ class AuthViewModel(
 
     fun login() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
 
             // Use the new sync function
             val success = repository.signInAndSyncProfile(
@@ -163,7 +163,7 @@ class AuthViewModel(
                 )
                 _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
             } else {
-                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = false)
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = false, errorMessage = "Invalid credentials")
                 // Optional: Set an error message if email isn't verified
             }
         }
@@ -245,6 +245,7 @@ class AuthViewModel(
 data class AuthUiState(
     val email: String = "",
     val password: String = "",
+    val errorMessage: String = "",
     val country: Int = 0,
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,

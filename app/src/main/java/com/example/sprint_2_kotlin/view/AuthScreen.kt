@@ -351,16 +351,17 @@ fun AuthScreen(
                             viewModel.login()
                         } else {
                             // Add a check to ensure a country is selected
-                            if (selectedCountry?.id != null) { // Check for a valid ID, not 0
-                                viewModel.register(selectedCountry?.id ?: 0)
-                                succesMessage = "Register successful verify email before logging in"
-                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
-                            } else {
+                            if (selectedCountry?.id == null) {
                                 Log.d(TAG, "Selected country = ${selectedCountry?.id}")
                                 errorMessage = "Please select a country." // Show an error
 
-                            }
-                        }
+                            } else if (state.password.length < 6) {
+                                errorMessage = "Password must be at least 6 characters."
+
+                            }else {
+                                succesMessage = "Register successful verify email before logging in"
+                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
+                                viewModel.register(selectedCountry!!.id) } }
                     },
                     enabled = !state.isLoading,
                     modifier = Modifier
@@ -437,7 +438,7 @@ fun AuthScreen(
                 }
 
                 //  Error message display (local errors from biometric)
-                if (errorMessage.isNotEmpty()) {
+                if (errorMessage.isNotEmpty() || state.errorMessage.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -456,7 +457,7 @@ fun AuthScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = errorMessage,
+                                text = errorMessage + state.errorMessage,
                                 color = Color(0xFFD32F2F),
                                 style = MaterialTheme.typography.bodySmall
                             )
