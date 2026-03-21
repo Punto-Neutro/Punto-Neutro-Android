@@ -37,6 +37,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.ForgotPasswordViewModel
 
+// ... imports
+import androidx.compose.ui.res.stringResource
+import com.example.sprint_2_kotlin.R
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewModel = viewModel()) {
@@ -51,10 +55,10 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                 title = {
                     Text(
                         text = when(state.phase) {
-                            1 -> "Forgot Password"
-                            2 -> "Verify Code"
-                            3 -> "New Password"
-                            else -> "Success"
+                            1 -> stringResource(R.string.forgot_password_title)
+                            2 -> stringResource(R.string.verify_code_title)
+                            3 -> stringResource(R.string.new_password_title)
+                            else -> stringResource(R.string.success_title)
                         },
                         color = fixedBlack,
                         fontSize = 18.sp,
@@ -63,18 +67,15 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        // Logic to go back between phases or exit
                         if (state.phase == 1 || state.phase == 4) {
                             onBackToLogin()
                         } else {
-                            // You might want to add a 'goBackPhase' function to your ViewModel
-                            // For now, let's just go back to login if they want to cancel
-                            onBackToLogin()
+                            onBackToLogin() // Or implement back-phase logic
                         }
                     }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBackIosNew,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.Close),
                             tint = fixedBlack
                         )
                     }
@@ -92,7 +93,6 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // ERROR MESSAGE
             if (state.errorMessage != null) {
                 Text(
                     text = state.errorMessage!!,
@@ -106,7 +106,7 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
             when (state.phase) {
                 1 -> { // EMAIL PHASE
                     Text(
-                        "Enter your email to receive a 6-digit reset code",
+                        text = stringResource(R.string.enter_email_instruction),
                         color = fixedBlack,
                         textAlign = TextAlign.Center
                     )
@@ -114,7 +114,7 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                     OutlinedTextField(
                         value = state.email,
                         onValueChange = viewModel::onEmailChange,
-                        label = { Text("Email") },
+                        label = { Text(stringResource(R.string.Email)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = fixedBlack,
@@ -129,12 +129,12 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                         colors = ButtonDefaults.buttonColors(containerColor = fixedBlack)
                     ) {
                         if (state.isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                        else Text("Send Code")
+                        else Text(stringResource(R.string.send_code_button))
                     }
                 }
                 2 -> { // OTP PHASE
                     Text(
-                        "A 8-digit code was sent to ${state.email}. Enter it below:",
+                        text = stringResource(R.string.enter_code_instruction, state.email),
                         color = fixedBlack,
                         textAlign = TextAlign.Center
                     )
@@ -142,7 +142,7 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                     OutlinedTextField(
                         value = state.otpToken,
                         onValueChange = { if (it.length <= 8) viewModel.onOtpChange(it) },
-                        label = { Text("Verification Code") },
+                        label = { Text(stringResource(R.string.verification_code_label)) },
                         placeholder = { Text("12345678") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -158,16 +158,19 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                         colors = ButtonDefaults.buttonColors(containerColor = primaryBlue)
                     ) {
                         if (state.isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                        else Text("Verify Code")
+                        else Text(stringResource(R.string.verify_code_button))
                     }
                 }
                 3 -> { // PASSWORD PHASE
-                    Text("Almost done! Set your new password:", color = fixedBlack)
+                    Text(
+                        text = stringResource(R.string.set_new_password_instruction),
+                        color = fixedBlack
+                    )
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(
                         value = state.newPassword,
                         onValueChange = viewModel::onPasswordChange,
-                        label = { Text("New Password") },
+                        label = { Text(stringResource(R.string.new_password_label)) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -183,7 +186,7 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                         colors = ButtonDefaults.buttonColors(containerColor = fixedBlack)
                     ) {
                         if (state.isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                        else Text("Update Password")
+                        else Text(stringResource(R.string.update_password_button))
                     }
                 }
                 4 -> { // SUCCESS
@@ -195,7 +198,7 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "Password updated successfully!",
+                        text = stringResource(R.string.password_updated_success),
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
                         color = fixedBlack
@@ -206,7 +209,7 @@ fun ForgotPasswordView(onBackToLogin: () -> Unit, viewModel: ForgotPasswordViewM
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = fixedBlack)
                     ) {
-                        Text("Return to Login")
+                        Text(stringResource(R.string.return_to_login))
                     }
                 }
             }

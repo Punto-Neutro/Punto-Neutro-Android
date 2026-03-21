@@ -67,6 +67,26 @@
     <string name="Country">País</string>
     <string name="Select_Your_Country">Selecciona tu país</string>
 
+    <!-- Forgot Password -->
+    <string name="forgot_password_title">Olvidé mi contraseña</string>
+    <string name="verify_code_title">Verificar Código</string>
+    <string name="new_password_title">Nueva Contraseña</string>
+    <string name="success_title">Éxito</string>
+
+    <string name="enter_email_instruction">Ingresa tu correo para recibir un código de 6 dígitos</string>
+    <string name="send_code_button">Enviar Código</string>
+
+    <string name="enter_code_instruction">Se envió un código de 6 dígitos a %1$s. Ingrésalo a continuación:</string>
+    <string name="verification_code_label">Código de Verificación</string>
+    <string name="verify_code_button">Verificar Código</string>
+
+    <string name="set_new_password_instruction">¡Casi listo! Ingresa tu nueva contraseña:</string>
+    <string name="new_password_label">Nueva Contraseña</string>
+    <string name="update_password_button">Actualizar Contraseña</string>
+
+    <string name="password_updated_success">¡Contraseña actualizada con éxito!</string>
+    <string name="return_to_login">Volver al Inicio</string>
+
 
     <!-- News Feed -->
     <string name="category_economics">Economía</string>
@@ -125,6 +145,8 @@
     <string name="claim">reclamo</string>
     <string name="suggestion">sugerencia</string>
     <string name="complaint">queja</string>
+
+
 
 
 
