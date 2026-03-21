@@ -1,6 +1,7 @@
 package com.example.sprint_2_kotlin
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -31,7 +32,11 @@ import androidx.appcompat.app.AppCompatDelegate
 
 
 import androidx.core.os.LocaleListCompat
-
+import androidx.lifecycle.lifecycleScope
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
 
 
 class MainActivity : AppCompatActivity() {
@@ -46,6 +51,14 @@ class MainActivity : AppCompatActivity() {
         )[BookmarkViewModel::class.java]
     }
 
+    private val client = createSupabaseClient(
+        supabaseUrl = "https://fyotaxqfpgbkyefapzya.supabase.co",
+        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5b3RheHFmcGdia3llZmFwenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MDMxNDIsImV4cCI6MjA4NzM3OTE0Mn0.Hvb--I3VLCkkhXAbMUaUC-O2SKbV9JyyUjFc3dmmxjU"
+    ) {
+        install(Postgrest)
+        install(Auth)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
 
@@ -54,7 +67,11 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
+
+
         enableEdgeToEdge()
+        
+        
 
         setContent {
 
@@ -120,6 +137,9 @@ class MainActivity : AppCompatActivity() {
                                         navController.navigate("news_feed") {
                                             popUpTo("auth") { inclusive = true }
                                         }
+                                    },
+                                    onForgotPassword = {
+                                        navController.navigate("forgot_password")
                                     }
                                 )
                             }
@@ -228,6 +248,15 @@ class MainActivity : AppCompatActivity() {
                                         navController.navigate("news_item_detail/$newsItemId")
                                     },
                                     viewModel = bookmarkViewModel
+                                )
+                            }
+
+                            // Inside NavHost in MainActivity.kt
+                            composable(route = "forgot_password") {
+                                ForgotPasswordView( // Pass the dark mode state
+                                    onBackToLogin = {
+                                        navController.popBackStack()
+                                    }
                                 )
                             }
 

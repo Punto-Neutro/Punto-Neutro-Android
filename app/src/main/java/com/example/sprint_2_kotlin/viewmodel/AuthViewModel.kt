@@ -105,59 +105,69 @@ class AuthViewModel(
     }
 
     fun onEmailChange(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        _uiState.value = _uiState.value.copy(email = value,errorMessage = "")
     }
 
     fun onPasswordChange(value: String) {
-        _uiState.value = _uiState.value.copy(password = value)
+        _uiState.value = _uiState.value.copy(password = value,errorMessage = "")
     }
 
     // Add this function inside AuthViewModel
     fun onCountryChange(value: Int) {
-        _uiState.value = _uiState.value.copy(country = value)
+        _uiState.value = _uiState.value.copy(country = value,errorMessage = "")
+    }
+
+    // In AuthViewModel.kt
+
+    fun register(countryId: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
+
+            // Save the country in state so we have it ready for the first login
+            _uiState.value = _uiState.value.copy(country = countryId)
+
+            // Call the simplified signup (Auth only)
+            val success = repository.signUp(_uiState.value.email, _uiState.value.password)
+
+            if (success) {
+                Log.d(TAG, "Auth user created. Verification email sent.")
+                // We set isSuccess to false because they are NOT logged in yet
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isSuccess = false,
+
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = false)
+            }
+        }
     }
 
     fun login() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val success = repository.signIn(_uiState.value.email, _uiState.value.password)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
+
+            // Use the new sync function
+            val success = repository.signInAndSyncProfile(
+                email = _uiState.value.email,
+                password = _uiState.value.password,
+                countryId = _uiState.value.country // Uses the country selected during reg
+            )
 
             if (success) {
-                // Save session after successful login (with email and password)
-                val userId = 1 // Replace with actual user ID from your repository/API if available
+                val userId = 1 // Replace with actual logic if needed
                 sessionManager.saveSession(
                     email = _uiState.value.email,
                     password = _uiState.value.password,
                     userId = userId
                 )
-                println("DEBUG: Login successful, session saved for ${_uiState.value.email}")
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = false, errorMessage = "Invalid credentials")
+                // Optional: Set an error message if email isn't verified
             }
-
-            println("DEBUG: Login result = $success")
-            _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = success)
         }
     }
-
-    fun register(country: Int) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val success = repository.signUp(_uiState.value.email, _uiState.value.password,country)
-
-            if (success) {
-                // Save session after successful registration (with email and password)
-                val userId = 1 // Replace with actual user ID from your repository/API if available
-                sessionManager.saveSession(
-                    email = _uiState.value.email,
-                    password = _uiState.value.password,
-                    userId = userId
-                )
-                println("DEBUG: Registration successful, session saved for ${_uiState.value.email}")
-            }
-
-            _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = success)
-        }
-    }
-
     fun loginWithBiometric() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -235,6 +245,7 @@ class AuthViewModel(
 data class AuthUiState(
     val email: String = "",
     val password: String = "",
+    val errorMessage: String = "",
     val country: Int = 0,
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,

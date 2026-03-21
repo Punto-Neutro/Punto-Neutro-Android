@@ -4,6 +4,7 @@ import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,11 +42,13 @@ import utils.getTranslatedCountryName
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = viewModel(),
-    onLoginSuccess: () -> Unit = {}
+    onLoginSuccess: () -> Unit = {},
+    onForgotPassword: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     var isLoginMode by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    var succesMessage by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -206,6 +209,7 @@ fun AuthScreen(
                         onClick = {
                             isLoginMode = true
                             errorMessage = ""
+                            succesMessage = ""
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -215,6 +219,7 @@ fun AuthScreen(
                         onClick = {
                             isLoginMode = false
                             errorMessage = ""
+                            succesMessage = ""
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -336,22 +341,27 @@ fun AuthScreen(
                 Spacer(Modifier.height(20.dp))
 
 
+
                 // Main Action Button negro
                 Button(
                     onClick = {
                         errorMessage = ""
+                        succesMessage = ""
                         if (isLoginMode) {
                             viewModel.login()
                         } else {
                             // Add a check to ensure a country is selected
-                            if (selectedCountry?.id != 0) { // Check for a valid ID, not 0
-                                viewModel.register(selectedCountry?.id ?: 0)
-                            } else {
-
+                            if (selectedCountry?.id == null) {
                                 Log.d(TAG, "Selected country = ${selectedCountry?.id}")
                                 errorMessage = "Please select a country." // Show an error
-                            }
-                        }
+
+                            } else if (state.password.length < 6) {
+                                errorMessage = "Password must be at least 6 characters."
+
+                            }else {
+                                succesMessage = "Register successful verify email before logging in"
+                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
+                                viewModel.register(selectedCountry!!.id) } }
                     },
                     enabled = !state.isLoading,
                     modifier = Modifier
@@ -417,16 +427,18 @@ fun AuthScreen(
                 if (isLoginMode) {
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { /* TODO: Implement forgot password */ }) {
-                        Text(
-                            text = stringResource(R.string.Forgot_Password),
-                            color = Color(0xFF666666),
-                            fontSize = 14.sp
+                        // Inside AuthScreen.kt
+                        Text(text = stringResource(R.string.Forgot_Password),
+                            modifier = Modifier
+                                .clickable { onForgotPassword() }, // Add navigation
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF000000)
                         )
                     }
                 }
 
                 //  Error message display (local errors from biometric)
-                if (errorMessage.isNotEmpty()) {
+                if (errorMessage.isNotEmpty() || state.errorMessage.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -445,8 +457,35 @@ fun AuthScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = errorMessage,
+                                text = errorMessage + state.errorMessage,
                                 color = Color(0xFFD32F2F),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                if (succesMessage.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF90EE90)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mail,
+                                contentDescription = "Success",
+                                tint = Color(0xFF00913F),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = succesMessage,
+                                color = Color(0xFF00913F),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
