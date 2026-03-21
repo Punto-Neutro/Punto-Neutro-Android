@@ -74,6 +74,27 @@
     <string name="Country">Country</string>
     <string name="Select_Your_Country">Select your country</string>
 
+    <!-- Forgot Password -->
+    <string name="forgot_password_title">Forgot Password</string>
+    <string name="verify_code_title">Verify Code</string>
+    <string name="new_password_title">New Password</string>
+    <string name="success_title">Success</string>
+
+    <string name="enter_email_instruction">Enter your email to receive a 6-digit reset code</string>
+    <string name="send_code_button">Send Code</string>
+
+    <string name="enter_code_instruction">A 6-digit code was sent to %1$s. Enter it below:</string>
+    <string name="verification_code_label">Verification Code</string>
+    <string name="verify_code_button">Verify Code</string>
+
+    <string name="set_new_password_instruction">Almost done! Set your new password:</string>
+    <string name="new_password_label">New Password</string>
+    <string name="update_password_button">Update Password</string>
+
+    <string name="password_updated_success">Password updated successfully!</string>
+    <string name="return_to_login">Return to Login</string>
+
+
 
 
     <!-- News Feed -->

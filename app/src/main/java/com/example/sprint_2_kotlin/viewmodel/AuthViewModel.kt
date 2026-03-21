@@ -30,6 +30,9 @@ class AuthViewModel(
     private val daopqrs = AppDatabase.getDatabase(application).PQRSDao()
     private val daopqrstypes = AppDatabase.getDatabase(application).PQRS_typesDao()
 
+    private val readHistoryDao = AppDatabase.getDatabase(application).readHistoryDao()
+
+
 
     // Repository for authentication
     private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daopqrstypes)
@@ -146,6 +149,8 @@ class AuthViewModel(
     fun login() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
+
+            readHistoryDao.deleteAllHistory()
 
             // Use the new sync function
             val success = repository.signInAndSyncProfile(

@@ -60,6 +60,17 @@ fun AuthScreen(
     var selectedCountry by remember { mutableStateOf<Country?>(null) }
     val countries by viewModel.countries.collectAsState()
 
+    // State to manage the language dropdown
+    val surfaceColor = Color.White
+    val textColor =  Color(0xFF1A1A1A)
+    val secondaryTextColor =  Color(0xFF666666)
+
+
+    var languageExpanded by remember { mutableStateOf(false) }
+    val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "en" }
+    var selectedLanguage by remember { mutableStateOf(currentLocale) }
+
+
 
     // Navigation check - auto navigate if session exists
     LaunchedEffect(state.isSuccess, state.isCheckingSession) {
@@ -179,6 +190,69 @@ fun AuthScreen(
                 FeatureItem(stringResource(R.string.Network_of_verified_users))
 
                 Spacer(Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { languageExpanded = true } // Make the whole row clickable
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = "Language",
+                        tint = textColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = stringResource(id = R.string.Change_Language),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = textColor
+                        )
+                        Text(
+                            text = if (selectedLanguage.startsWith("es")) "Español" else "English",
+                            fontSize = 12.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
+
+                // Dropdown Menu for selecting language
+                Box {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Change Language",
+                        tint = secondaryTextColor
+                    )
+                    DropdownMenu(
+                        expanded = languageExpanded,
+                        onDismissRequest = { languageExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("English") },
+                            onClick = {
+                                LanguageManager.setLanguage("en")
+                                selectedLanguage = "en"
+
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Español") },
+                            onClick = {
+                                LanguageManager.setLanguage("es")
+                                selectedLanguage = "es"
+                            }
+                        )
+                    }
+                }
+
+            }
 
                 //  "Access your account" section
                 Text(
