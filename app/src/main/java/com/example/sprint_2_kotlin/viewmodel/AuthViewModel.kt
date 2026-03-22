@@ -56,7 +56,7 @@ class AuthViewModel(
     /**
      * Check if there's an existing valid session and auto-login
      */
-    private fun checkExistingSession() {
+    fun checkExistingSession() {
         viewModelScope.launch {
             try {
                 val isValid = sessionManager.isSessionValid()
@@ -151,6 +151,7 @@ class AuthViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
 
             readHistoryDao.deleteAllHistory()
+            repository.clearCache()
 
             // Use the new sync function
             val success = repository.signInAndSyncProfile(

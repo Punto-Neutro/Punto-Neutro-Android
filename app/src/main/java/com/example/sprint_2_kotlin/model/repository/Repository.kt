@@ -98,6 +98,8 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 this.email = email.lowercase()
                 this.password = password
             }
+
+            bookmarksDao.deleteAll()
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -370,7 +372,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 return 0
             }
         }
-        clearCache()
+
 
 
     } catch (_: Exception) {
@@ -553,7 +555,10 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             val response = client.from("news_items")
                 .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
                 {filter { eq("news_item_id",NewsItemId) }}
-            clearCache()
+            Log.d(TAG, "Successfully updated reliability score for news item: $NewsItemId")
+
+            newsItemDao.updateReliabilityScore(NewsItemId, newAveragerounded)
+
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -660,6 +665,8 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     suspend fun clearCache() = withContext(Dispatchers.IO) {
         newsItemDao.deleteAllNewsItems()
+        bookmarksDao.deleteAll()
+        daocomment.deleteAll()
         Log.d(TAG, "Cache cleared manually")
     }
 
@@ -1469,7 +1476,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
 
 
             // If cache is empty, fetch from Supabase
-            Log.d(TAG, "Fetching Countries from Supabase...")
+            Log.d(TAG, "Fetching Bookmarks from Supabase...")
             val response = client.postgrest["bookmarks"].select(
 
             ){  order("created_at", order = Order.DESCENDING)
@@ -1483,7 +1490,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
             // Save the fetched categories into the cache
             if (bookmarks.isNotEmpty()) {
                 bookmarksDao.insertAll(bookmarks)
-                Log.d(TAG, "Bookmarks  loaded from Supabase and cached: ${bookmarks.size}")
+                Log.d(TAG, "Bookmarks loaded from Supabase and cached: ${bookmarks.size}")
             } else {
                 Log.d(TAG, "No Bookmarks found on Supabase.")
             }

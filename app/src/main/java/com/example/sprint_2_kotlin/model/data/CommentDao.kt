@@ -9,6 +9,14 @@ interface CommentDao {
     @Insert
     suspend fun insert(comment: PendingComment)
     @Query("SELECT * FROM pending_comments") suspend fun getAll(): List<PendingComment>
+
+    @Query("update pending_comments set reliabilityScore = :reliabilityScore where newsItemId = :newsItemId")
+    suspend fun updateReliabilityScore(newsItemId: Int, reliabilityScore: Double)
+
     @Delete
     suspend fun delete(comment: PendingComment)
+
+    @Query("DELETE FROM pending_comments")
+    suspend fun deleteAll()
+
 }

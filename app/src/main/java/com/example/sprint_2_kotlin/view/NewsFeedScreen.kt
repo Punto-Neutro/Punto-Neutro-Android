@@ -93,6 +93,25 @@ fun NewsFeedScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     val countries by viewModel.countries.collectAsState()
+    val context = LocalContext.current
+    val sortedCountries = remember(countries) {
+        countries.sortedBy { country ->
+            // Convert the database name (e.g., "United States") to resource key (e.g., "country_united_states")
+            val resourceKey = "country_${country.country_name.lowercase().replace(" ", "_")}"
+
+            // Find the ID of that string in the current language's strings.xml
+            val resId = context.resources.getIdentifier(
+                resourceKey,
+                "string",
+                context.packageName
+            )
+
+            // Fetch the actual translated string (e.g., "Estados Unidos" if in Spanish)
+            if (resId != 0) context.getString(resId) else country.country_name
+        }
+    }
+
+
     val pqrstypes by viewModel.pqrstypes.collectAsState()
     val connectionRestored by viewModel.connectionRestored.collectAsState()
     val noSearchResults by viewModel.noSearchResults.collectAsState()
@@ -111,7 +130,7 @@ fun NewsFeedScreen(
     if (showFilterDialog) {
         FilterDialog(
             isDarkMode = isDarkMode,
-            countries = countries,
+            countries = sortedCountries,
             selectedCountryIds = selectedCountryIds,
             selectedScope = newsScope,
             onCountrySelected = viewModel::onCountrySelected,
@@ -145,7 +164,7 @@ fun NewsFeedScreen(
         FeedbackDialog(
             isDarkMode = isDarkMode,
             categories = categories,
-            countries = countries,
+            countries = sortedCountries,
             onDismiss = { showDialog = false }
 
         )
@@ -167,7 +186,7 @@ fun NewsFeedScreen(
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
 
-    val context = LocalContext.current
+
     val networkMonitor = remember { NetworkMonitor(context) }
 
 
@@ -1317,7 +1336,7 @@ fun getCategoryColorDynamic(categoryId: Int): Color {
 fun getReliabilityColor(score: Double): Color {
     return when {
         score >= 0.8 -> Color(0xFF4CAF50)
-        score >= 0.6 -> Color(0xFFC107)
+        score >= 0.6 -> Color(0xFFFFC107)
         else -> Color(0xFFE53935)
     }
 }

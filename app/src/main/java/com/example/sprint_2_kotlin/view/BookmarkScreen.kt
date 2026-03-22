@@ -1,5 +1,8 @@
+@file:OptIn(FlowPreview::class)
+
 package com.example.sprint_2_kotlin.view
 
+import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,10 +23,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import com.example.sprint_2_kotlin.R
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookmarksScreen(
+    preferences: SharedPreferences,
     isDarkMode: Boolean = false,
     onBackClick: () -> Unit = {},
     onNewsItemClick: (Int) -> Unit = {},
@@ -46,7 +53,11 @@ fun BookmarksScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     // 2. Setup scroll state and "should load more" detector
-    val lazyListState = rememberLazyListState()
+    val scrollposition = remember{ preferences.getInt("scroll_bookmarks", 0)}
+
+    val lazyListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = scrollposition
+    )
     val shouldLoadMore = remember {
         derivedStateOf {
             val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -61,6 +72,16 @@ fun BookmarksScreen(
             viewModel.loadNextPage()
         }
     }
+
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .debounce(500) // Debounce for 500ms
+            .collectLatest { index ->
+                preferences.edit().putInt("scroll_bookmarks", index).apply()
+            }
+    }
+
+
 
     Scaffold(
         topBar = {
