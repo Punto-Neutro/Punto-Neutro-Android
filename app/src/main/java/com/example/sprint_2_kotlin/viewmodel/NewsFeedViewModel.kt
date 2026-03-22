@@ -173,7 +173,6 @@ class NewsFeedViewModel(
 
         // Load categories and initial news
         loadCategories(true)
-        loadNewsItems()
         loadCountries(false)
         loadPQRStypes(forcedRefresh = false)
 
@@ -682,9 +681,6 @@ class NewsFeedViewModel(
                 if (connected) {
                     repository.syncPendingNews()
                     repository.syncPendingPQRS()
-                    repository.clearCache()
-
-
                 }
             }
         }

@@ -321,6 +321,11 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
 
         val pending = daocomment.getAll()
+// Assuming you create this DAO function
+        if (pending.isEmpty()) {
+            Log.d(TAG, "No pending comments to sync.")
+            return 1 // Nothing to sync
+        }
 
 
         for (comment in pending) {
@@ -365,6 +370,8 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 return 0
             }
         }
+        clearCache()
+
 
     } catch (_: Exception) {
         return 2

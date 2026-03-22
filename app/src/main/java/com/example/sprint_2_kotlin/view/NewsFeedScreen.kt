@@ -1,3 +1,5 @@
+@file:OptIn(FlowPreview::class)
+
 package com.example.sprint_2_kotlin.view
 
 import android.content.ContentValues.TAG
@@ -57,11 +59,19 @@ import com.example.sprint_2_kotlin.model.data.PQRS_types
 import utils.getTranslatedCategoryName
 import utils.getTranslatedCountryName
 import utils.getTranslatedPQRStypeame
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.SharedPreferences
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import java.util.prefs.Preferences
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
+    preferences: SharedPreferences,
     isDarkMode: Boolean = false,
     onNewsItemClick: (Int) -> Unit,
     onNavigateToGuide: () -> Unit = {},
@@ -70,7 +80,11 @@ fun NewsFeedScreen(
     modifier: Modifier = Modifier
 ) {
     val newsItems: List<NewsItem> by viewModel.newsItems.collectAsState()
-    val lazyListState = rememberLazyListState() // Add this state
+    val scrollposition = remember{ preferences.getInt("scroll_news", 0)}
+
+    val lazyListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = scrollposition
+    ) // Add this state
 
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -121,6 +135,12 @@ fun NewsFeedScreen(
 
 
 
+
+
+
+
+
+
     if (showDialog) {
         FeedbackDialog(
             isDarkMode = isDarkMode,
@@ -152,6 +172,7 @@ fun NewsFeedScreen(
 
 
 
+
     LaunchedEffect(Unit) {
         viewModel.startNetworkObserver(networkMonitor)
 
@@ -160,6 +181,7 @@ fun NewsFeedScreen(
     LaunchedEffect(newsItems.isEmpty() && !isLoading && !isRefreshing) {
         if (newsItems.isEmpty() && !isLoading && !isRefreshing) {
             viewModel.loadNewsItems(false)
+            Log.d(TAG, "LaunchedEffect: Loading news items")
         }
     }
 
@@ -167,6 +189,14 @@ fun NewsFeedScreen(
         if (shouldLoadMore.value && !newsItems.isEmpty()  ) {
             viewModel.loadNextPage()
         }
+    }
+
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .debounce(500) // Debounce for 500ms
+            .collectLatest { index ->
+                preferences.edit().putInt("scroll_news", index).apply()
+            }
     }
 
 

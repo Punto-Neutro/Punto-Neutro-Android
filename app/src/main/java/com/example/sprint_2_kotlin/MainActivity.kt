@@ -33,6 +33,8 @@ import androidx.appcompat.app.AppCompatDelegate
 
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.sprint_2_kotlin.viewmodel.NewsFeedViewModel
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.createSupabaseClient
@@ -50,6 +52,14 @@ class MainActivity : AppCompatActivity() {
             ViewModelProvider.AndroidViewModelFactory.getInstance(application)
         )[BookmarkViewModel::class.java]
     }
+
+    private val prefs by lazy {
+        applicationContext.getSharedPreferences("my_preferences", MODE_PRIVATE)
+    }
+
+    val newsFeedViewModel: NewsFeedViewModel by viewModels()
+
+
 
     private val client = createSupabaseClient(
         supabaseUrl = "https://fyotaxqfpgbkyefapzya.supabase.co",
@@ -146,6 +156,8 @@ class MainActivity : AppCompatActivity() {
 
                             composable(route = "news_feed") {
                                 NewsFeedScreen(
+                                    viewModel = newsFeedViewModel,
+                                    preferences = prefs,
                                     isDarkMode = isDarkMode,
                                     onNewsItemClick = { newsItemId ->
                                         navController.navigate("news_item_detail/$newsItemId")
@@ -173,7 +185,7 @@ class MainActivity : AppCompatActivity() {
                                     bookmarkViewModel = bookmarkViewModel,
                                     onBackClick = {
                                         navController.navigate("news_feed") {
-                                            popUpTo("news_feed") { inclusive = true }
+                                            popUpTo(0) { inclusive = true }
                                         }
                                     },
                                     onShareClick = { url, title ->
@@ -205,7 +217,7 @@ class MainActivity : AppCompatActivity() {
                                     },
                                     onNavigateToHome = {
                                         navController.navigate("news_feed") {
-                                            popUpTo("news_feed") { inclusive = true }
+                                            popUpTo(0) { inclusive = true }
                                         }
                                     },
                                     onNavigateToGuide = {
