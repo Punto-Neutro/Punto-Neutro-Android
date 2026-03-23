@@ -66,6 +66,7 @@
     <string name="Password">Contraseña</string>
     <string name="Country">País</string>
     <string name="Select_Your_Country">Selecciona tu país</string>
+    <string name="invalid_credentials">Credenciales no validas</string>
 
     <!-- Forgot Password -->
     <string name="forgot_password_title">Olvidé mi contraseña</string>

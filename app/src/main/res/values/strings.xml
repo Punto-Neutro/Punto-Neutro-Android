@@ -73,6 +73,8 @@
     <string name="Password">Password</string>
     <string name="Country">Country</string>
     <string name="Select_Your_Country">Select your country</string>
+    <string name="invalid_credentials">Invalid credentials</string>
+
 
     <!-- Forgot Password -->
     <string name="forgot_password_title">Forgot Password</string>
