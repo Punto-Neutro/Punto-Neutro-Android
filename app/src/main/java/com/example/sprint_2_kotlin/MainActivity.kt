@@ -1,9 +1,11 @@
 package com.example.sprint_2_kotlin
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.*
@@ -13,7 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
+
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -26,8 +28,18 @@ import com.example.sprint_2_kotlin.viewmodel.HomeViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
 import com.example.sprint_2_kotlin.model.data.ThemePreferences
 import kotlinx.coroutines.launch
+import androidx.appcompat.app.AppCompatDelegate
 
-class MainActivity : FragmentActivity() {
+
+import androidx.core.os.LocaleListCompat
+import androidx.lifecycle.lifecycleScope
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+
+
+class MainActivity : AppCompatActivity() {
 
     private val connectivityViewModel: HomeViewModel by viewModels()
 
@@ -39,11 +51,33 @@ class MainActivity : FragmentActivity() {
         )[BookmarkViewModel::class.java]
     }
 
+    private val client = createSupabaseClient(
+        supabaseUrl = "https://fyotaxqfpgbkyefapzya.supabase.co",
+        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5b3RheHFmcGdia3llZmFwenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MDMxNDIsImV4cCI6MjA4NzM3OTE0Mn0.Hvb--I3VLCkkhXAbMUaUC-O2SKbV9JyyUjFc3dmmxjU"
+    ) {
+        install(Postgrest)
+        install(Auth)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
+
+        val savedLocales = AppCompatDelegate.getApplicationLocales()
+        AppCompatDelegate.setApplicationLocales(savedLocales)
+
         super.onCreate(savedInstanceState)
+
+
+
         enableEdgeToEdge()
+        
+        
 
         setContent {
+
+
+
+
             // DARK MODE STATE - Lee la preferencia guardada
             val isDarkMode by ThemePreferences.isDarkMode(this).collectAsState(initial = false)
             val coroutineScope = rememberCoroutineScope()
@@ -103,6 +137,9 @@ class MainActivity : FragmentActivity() {
                                         navController.navigate("news_feed") {
                                             popUpTo("auth") { inclusive = true }
                                         }
+                                    },
+                                    onForgotPassword = {
+                                        navController.navigate("forgot_password")
                                     }
                                 )
                             }
@@ -214,6 +251,15 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
 
+                            // Inside NavHost in MainActivity.kt
+                            composable(route = "forgot_password") {
+                                ForgotPasswordView( // Pass the dark mode state
+                                    onBackToLogin = {
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
+
                             composable(
                                 route = "qr_share/{url}/{title}",
                                 arguments = listOf(
@@ -242,6 +288,8 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
+
+
 
     private fun showBiometricPrompt(
         onSuccess: () -> Unit,

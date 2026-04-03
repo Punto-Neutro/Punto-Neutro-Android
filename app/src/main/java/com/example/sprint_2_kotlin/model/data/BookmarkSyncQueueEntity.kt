@@ -14,6 +14,11 @@ data class BookmarkSyncQueueEntity(
     val id: Long = 0,
 
     val newsItemId: Int,              // ID of the news item
+    val categoryId: Int,              // Category ID
+    val userId: Int?,                  // User ID
+    val shortDescription: String,     // Short description
+    val imageUrl: String,             // Image URL
+    val title: String,                // Title
     val operationType: OperationType, // ADD or REMOVE
 
     // Timestamp and retry control

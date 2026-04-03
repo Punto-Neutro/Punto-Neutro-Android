@@ -16,9 +16,12 @@ import androidx.room.RoomDatabase
         PendingComment::class,
         ReadHistoryEntity::class,        // update: Nueva entidad para historial de lectura
         BookmarkEntity::class,           // update: Entidad de bookmarks
-        BookmarkSyncQueueEntity::class   // update: Cola de sincronización para eventual connectivity
+        BookmarkSyncQueueEntity::class,   // update: Cola de sincronización para eventual connectivity
+        Country::class,
+        PQRS::class,
+        PQRS_types::class
     ],
-    version = 5,  // update: Incrementado de 3 a 4
+    version = 13,  // update: Incrementado de 3 a 4
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +35,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao        // nuuevo: DAO para bookmarks
 
     abstract fun categoryDao(): CategoryDao        // nuevo: DAO para categorías
+
+    abstract fun countryDao(): CountryDao        // nuevo: DAO para paises
+
+    abstract fun PQRSDao(): PQRSDao        // nuevo: DAO para PQRs
+
+    abstract fun PQRS_typesDao(): PQRS_typesDao        // nuevo: DAO para tipos de PQRs
 
 
 

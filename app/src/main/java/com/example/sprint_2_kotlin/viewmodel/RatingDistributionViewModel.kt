@@ -23,7 +23,11 @@ class RatingDistributionViewModel(application: Application) : AndroidViewModel(a
 
     private val dao = AppDatabase.getDatabase(application).CommentDao()
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
-    private val repository = Repository(application.applicationContext, dao, daonews)
+
+    private val daopqrs = AppDatabase.getDatabase(application).PQRSDao()
+    private val daopqrstypes = AppDatabase.getDatabase(application).PQRS_typesDao()
+
+    private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daopqrstypes)
 
 
     // Estados

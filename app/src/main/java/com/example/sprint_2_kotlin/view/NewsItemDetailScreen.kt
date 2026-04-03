@@ -1,5 +1,6 @@
 package com.example.sprint_2_kotlin.view
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -28,6 +29,11 @@ import com.example.sprint_2_kotlin.viewmodel.NewsItemDetailViewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel  // bookmark
 import utils.NetworkMonitor
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalUriHandler // Add this import
+import androidx.compose.foundation.clickable // Ensure this is imported
+import androidx.compose.ui.res.stringResource
+import com.example.sprint_2_kotlin.R
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +46,10 @@ fun NewsItemDetailScreen(
     viewModel: NewsItemDetailViewModel = viewModel(),
     bookmarkViewModel: BookmarkViewModel = viewModel()  // bookmark
 ) {
+
+    // Inside NewsItemDetailScreen function
+    val uriHandler = LocalUriHandler.current // 1. Get the URI handler
+
     val context = LocalContext.current
     val networkMonitor = remember { NetworkMonitor(context) }
 
@@ -64,9 +74,11 @@ fun NewsItemDetailScreen(
     //  Estado del bookmark
     var isBookmarked by remember { mutableStateOf(false) }
 
-    LaunchedEffect(newsItemId) {
-        currentItem?.let {
-            isBookmarked = bookmarkViewModel.isBookmarked(newsItemId)
+    LaunchedEffect(currentItem) {
+        // Only proceed if currentItem is no longer null
+        currentItem?.let { item ->
+            Log.d("NewsDetail", "Checking bookmark for item: ${item.news_item_id}")
+            isBookmarked = bookmarkViewModel.isBookmarked(item.news_item_id)
         }
     }
 
@@ -77,12 +89,13 @@ fun NewsItemDetailScreen(
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
     val primaryColor = if (isDarkMode) Color(0xFF9C27B0) else Color(0xFF1976D2)
 
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "News Details",
+                        stringResource(R.string.News_Details),
                         color = textColor
                     )
                 },
@@ -173,11 +186,6 @@ fun NewsItemDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Category ID: ${item.category_id}",
-                            fontSize = 12.sp,
-                            color = primaryColor
-                        )
                         ReliabilityIndicator(item.average_reliability_score)
                     }
 
@@ -185,12 +193,12 @@ fun NewsItemDetailScreen(
 
                     // Meta info
                     Text(
-                        text = "By ${item.author_type} at ${item.author_institution}",
+                        text = stringResource(R.string.By) + " ${item.author_type} "+ stringResource(R.string.at) + " ${item.author_institution}",
                         fontSize = 14.sp,
                         color = secondaryTextColor
                     )
                     Text(
-                        text = "Published ${item.days_since} days ago • ${item.total_ratings} total ratings",
+                        text =stringResource(R.string.Published) + " ${item.days_since} ${stringResource(R.string.days_ago)} • ${item.total_ratings} ${stringResource(R.string.total_ratings)}",
                         fontSize = 12.sp,
                         color = secondaryTextColor
                     )
@@ -209,9 +217,19 @@ fun NewsItemDetailScreen(
 
                     if (item.original_source_url.isNotEmpty()) {
                         Text(
-                            text = "Original source: ${item.original_source_url}",
+                            text = "${stringResource(R.string.Source)}: ${item.original_source_url}",
                             fontSize = 12.sp,
-                            color = primaryColor
+                            color = primaryColor,
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clickable {
+                                    // 2. Open the URL when clicked
+                                    try {
+                                        uriHandler.openUri(item.original_source_url)
+                                    } catch (e: Exception) {
+                                        // Handle cases where the URL might be malformed
+                                    }
+                                }
                         )
                     }
 
@@ -228,7 +246,7 @@ fun NewsItemDetailScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Ratings & Comments",
+                        text = stringResource(R.string.Ratings_and_comments),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textColor
@@ -293,7 +311,7 @@ fun CommentSection(
                 containerColor = buttonColor
             )
         ) {
-            Text(if (isExpanded) "Cancelar" else "Agregar comentario")
+            Text(if (isExpanded) stringResource(R.string.Cancel) else stringResource(R.string.Add_comment))
         }
 
         AnimatedVisibility(isExpanded) {
@@ -311,7 +329,7 @@ fun CommentSection(
                     OutlinedTextField(
                         value = comment,
                         onValueChange = { comment = it },
-                        label = { Text("Comentario", color = secondaryTextColor) },
+                        label = { Text(stringResource(R.string.Comment), color = secondaryTextColor) },
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 4,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -325,7 +343,8 @@ fun CommentSection(
                     Spacer(Modifier.height(12.dp))
 
                     Text(
-                        text = "Valor: ${"%.2f".format(rating)}",
+                        text = stringResource(R.string.Value) + ": ${(rating * 100).toInt()}",
+
                         fontSize = 14.sp,
                         color = textColor
                     )
@@ -370,7 +389,7 @@ fun CommentSection(
                             containerColor = buttonColor
                         )
                     ) {
-                        Text("Enviar")
+                        Text(stringResource(R.string.Submit))
                     }
 
                     message?.let {

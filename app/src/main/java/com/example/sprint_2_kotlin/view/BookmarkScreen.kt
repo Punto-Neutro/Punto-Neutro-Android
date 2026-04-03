@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -12,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.sprint_2_kotlin.viewmodel.BookmarkViewModel
+import com.example.sprint_2_kotlin.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,13 +29,11 @@ fun BookmarksScreen(
     onNewsItemClick: (Int) -> Unit = {},
     viewModel: BookmarkViewModel = viewModel()
 ) {
-    val bookmarks by viewModel.bookmarks.collectAsState()
     val bookmarkCount by viewModel.bookmarkCount.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val pendingSyncCount by viewModel.pendingSyncCount.collectAsState()
     val syncStatus by viewModel.syncStatus.collectAsState()
 
-    var showClearDialog by remember { mutableStateOf(false) }
 
     // Colores dinámicos
     val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
@@ -40,12 +41,33 @@ fun BookmarksScreen(
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
 
+    // 1. Use the new paginated state instead of the full list
+    val bookmarks by viewModel.paginatedBookmarks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // 2. Setup scroll state and "should load more" detector
+    val lazyListState = rememberLazyListState()
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
+                ?: return@derivedStateOf false
+            lastVisibleItem.index >= lazyListState.layoutInfo.totalItemsCount - 5
+        }
+    }
+
+    // 3. Trigger load more when needed
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value && bookmarks.isNotEmpty()) {
+            viewModel.loadNextPage()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Bookmarks",
+                        stringResource(R.string.Bookmarks),
                         color = textColor
                     )
                 },
@@ -56,17 +78,6 @@ fun BookmarksScreen(
                             contentDescription = "Back",
                             tint = textColor
                         )
-                    }
-                },
-                actions = {
-                    if (bookmarkCount > 0) {
-                        IconButton(onClick = { showClearDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Clear all",
-                                tint = Color(0xFFE53935)
-                            )
-                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -102,6 +113,7 @@ fun BookmarksScreen(
                 }
             } else {
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -109,7 +121,7 @@ fun BookmarksScreen(
                     // Header
                     item {
                         Text(
-                            text = "$bookmarkCount Saved Article${if (bookmarkCount != 1) "s" else ""}",
+                            text = "$bookmarkCount ${stringResource(R.string.Saved_articles)}${if (bookmarkCount != 1) "s" else ""}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
@@ -124,42 +136,17 @@ fun BookmarksScreen(
                             onClick = { onNewsItemClick(bookmark.newsItemId) }
                         )
                     }
+                    if (isLoading) {
+                        item {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Clear confirmation dialog
-    if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            icon = {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = Color(0xFFE53935)
-                )
-            },
-            title = { Text("Clear All Bookmarks?") },
-            text = { Text("This will remove all $bookmarkCount saved articles. This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.clearAllBookmarks()
-                        showClearDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE53935)
-                    )
-                ) {
-                    Text("Clear All")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+
 }

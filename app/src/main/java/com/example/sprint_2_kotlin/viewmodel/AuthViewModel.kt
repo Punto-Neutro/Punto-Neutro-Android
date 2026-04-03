@@ -1,10 +1,14 @@
 package com.example.sprint_2_kotlin.viewmodel
 
 import android.app.Application
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sprint_2_kotlin.model.auth.SessionManager
 import com.example.sprint_2_kotlin.model.data.AppDatabase
+import com.example.sprint_2_kotlin.model.data.Category
+import com.example.sprint_2_kotlin.model.data.Country
 import com.example.sprint_2_kotlin.model.repository.Repository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,8 +27,15 @@ class AuthViewModel(
     private val dao = AppDatabase.getDatabase(application).CommentDao()
     private val daonews = AppDatabase.getDatabase(application).newsItemDao()
 
+    private val daopqrs = AppDatabase.getDatabase(application).PQRSDao()
+    private val daopqrstypes = AppDatabase.getDatabase(application).PQRS_typesDao()
+
+    private val readHistoryDao = AppDatabase.getDatabase(application).readHistoryDao()
+
+
+
     // Repository for authentication
-    private val repository = Repository(application.applicationContext, dao, daonews)
+    private val repository = Repository(application.applicationContext, dao, daonews, daopqrs, daopqrstypes)
 
     // Session Manager for persistent login
     private val sessionManager = SessionManager(application.applicationContext)
@@ -33,9 +44,13 @@ class AuthViewModel(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    private val _countries = MutableStateFlow<List<Country>>(emptyList())
+    val countries: StateFlow<List<Country>> = _countries
+
     init {
         // Check if user is already logged in when ViewModel is created
         checkExistingSession()
+        loadCountries(true)
     }
 
     /**
@@ -93,54 +108,71 @@ class AuthViewModel(
     }
 
     fun onEmailChange(value: String) {
-        _uiState.value = _uiState.value.copy(email = value)
+        _uiState.value = _uiState.value.copy(email = value,errorMessage = "")
     }
 
     fun onPasswordChange(value: String) {
-        _uiState.value = _uiState.value.copy(password = value)
+        _uiState.value = _uiState.value.copy(password = value,errorMessage = "")
+    }
+
+    // Add this function inside AuthViewModel
+    fun onCountryChange(value: Int) {
+        _uiState.value = _uiState.value.copy(country = value,errorMessage = "")
+    }
+
+    // In AuthViewModel.kt
+
+    fun register(countryId: Int) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
+
+            // Save the country in state so we have it ready for the first login
+            _uiState.value = _uiState.value.copy(country = countryId)
+
+            // Call the simplified signup (Auth only)
+            val success = repository.signUp(_uiState.value.email, _uiState.value.password)
+
+            if (success) {
+                Log.d(TAG, "Auth user created. Verification email sent.")
+                // We set isSuccess to false because they are NOT logged in yet
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isSuccess = false,
+
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = false)
+            }
+        }
     }
 
     fun login() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val success = repository.signIn(_uiState.value.email, _uiState.value.password)
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = "")
+
+            readHistoryDao.deleteAllHistory()
+
+            // Use the new sync function
+            val success = repository.signInAndSyncProfile(
+                email = _uiState.value.email,
+                password = _uiState.value.password,
+                countryId = _uiState.value.country // Uses the country selected during reg
+            )
 
             if (success) {
-                // Save session after successful login (with email and password)
-                val userId = 1 // Replace with actual user ID from your repository/API if available
+                val userId = 1 // Replace with actual logic if needed
                 sessionManager.saveSession(
                     email = _uiState.value.email,
                     password = _uiState.value.password,
                     userId = userId
                 )
-                println("DEBUG: Login successful, session saved for ${_uiState.value.email}")
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = false, errorMessage = "Invalid credentials")
+                // Optional: Set an error message if email isn't verified
             }
-
-            println("DEBUG: Login result = $success")
-            _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = success)
         }
     }
-
-    fun register() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            val success = repository.signUp(_uiState.value.email, _uiState.value.password)
-
-            if (success) {
-                // Save session after successful registration (with email and password)
-                val userId = 1 // Replace with actual user ID from your repository/API if available
-                sessionManager.saveSession(
-                    email = _uiState.value.email,
-                    password = _uiState.value.password,
-                    userId = userId
-                )
-                println("DEBUG: Registration successful, session saved for ${_uiState.value.email}")
-            }
-
-            _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = success)
-        }
-    }
-
     fun loginWithBiometric() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -199,11 +231,27 @@ class AuthViewModel(
     fun getUserEmail(): kotlinx.coroutines.flow.Flow<String?> {
         return sessionManager.userEmail
     }
+
+    fun loadCountries(forcedRefresh: Boolean) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "Loading countries...")
+                val categoriesList = repository.getCountries(forcedRefresh )
+                _countries.value = categoriesList
+                Log.d(TAG, "Countries loaded: ${categoriesList.size}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading countries", e)
+                _countries.value = emptyList()
+            }
+        }
+    }
 }
 
 data class AuthUiState(
     val email: String = "",
     val password: String = "",
+    val errorMessage: String = "",
+    val country: Int = 0,
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
     val isCheckingSession: Boolean = true // Track if we're checking existing session

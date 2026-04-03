@@ -1,3 +1,436 @@
 <resources>
-    <string name="app_name">Sprint-2-Kotlin</string>
+    <string name="app_name">Punto_Neutro</string>
+    <!-- Edit Profile -->
+    <string name="profile">Profile</string>
+    <string name="notifications">notifications</string>
+    <string name="Edit">Edit </string>
+    <string name="Change_Language">Change Language</string>
+    <string name="Recent_activity">Recent activity</string>
+    <string name="Achievements">Achievements</string>
+    <string name="Coming_soon">Coming soon...</string>
+    <string name="Confirm_logout">Confirm logout</string>
+
+    <string name="Are_sure_you_want_to_log_out">Are you sure you want to log out? You will need to sign in again next time.</string>
+    <string name="Logout">Logout</string>
+
+    <string name="Settings">Settings</string>
+    <string name="Dark_mode">Dark mode</string>
+    <string name="Enabled">Enabled</string>
+    <string name="Disabled">Disabled</string>
+    <string name="Language">Language</string>
+    <string name="Mores_changes_coming_soon">Mores settings coming soon...</string>
+    <string name="Done">Done</string>
+    <string name="Anonymous_User">Anonymous User</string>
+    <string name="Active_session">Active session</string>
+    <string name="Admin_analytics">Admin analytics</string>
+    <string name="Articles_read">Articles read recently</string>
+
+    <string name="Comments_submitted">Comments submitted</string>
+    <string name="Bookmarks">Bookmarks</string>
+    <string name="Day_streak">Day streak</string>
+    <string name="Close">Close</string>
+    <string name="Activity">Activity</string>
+
+
+
+
+    <!-- comentario -->
+    <!-- BookMark -->
+    <string name="Saved_articles">Saved_article</string>
+    <string name="Clear_all_bookmarks">Clear All Bookmarks?</string>
+    <string name="This_will_remove_all">This will remove all</string>
+    <string name="This_action_cannot_be_undone">saved articles. This action cannot be undone.</string>
+    <string name="Clear_all">Clear All</string>
+    <string name="Offline_mode">Offline Mode</string>
+    <string name="All_synced">All synced</string>
+    <string name="Syncing...">All synced</string>
+    <string name="sync_pending">sync pending</string>
+    <string name="No_bookmarks_yet">No Bookmarks Yet</string>
+    <string name="Save_articles_to_read_them_later">Save articles to read them later</string>
+    <string name="Just_now">Just now</string>
+
+
+
+
+    <!-- Login -->
+
+    <string name="Login_in_automatically">Logging in automatically...</string>
+    <string name="Login_failed">Login</string>
+    <string name="Fighting_misinformation">Fighting misinformation</string>
+    <string name="A_collaborative_platform_where...">A collaborative platform where the community verifies news in real-time to combat disinformation.</string>
+    <string name="Register_failed">Register failed</string>
+    <string name="Source_credibility">Source_credibility_analysis</string>
+    <string name="Realtime_collaborative_verification">Real-time collaborative verification</string>
+    <string name="Network_of_verified_users">Network of verified users</string>
+    <string name="Access_your_account">Access your account</string>
+    <string name="Enter_your_credentials_to_continue">Enter your credentials to continue</string>
+    <string name="Sign_in">Sign in</string>
+    <string name="With_fingerprint">with fingerprint</string>
+    <string name="Register">Register</string>
+    <string name="You.example.com">you@example.com</string>
+    <string name="Forgot_Password">Forgot your password?</string>
+    <string name="Email">Email</string>
+    <string name="Password">Password</string>
+    <string name="Country">Country</string>
+    <string name="Select_Your_Country">Select your country</string>
+
+    <!-- Forgot Password -->
+    <string name="forgot_password_title">Forgot Password</string>
+    <string name="verify_code_title">Verify Code</string>
+    <string name="new_password_title">New Password</string>
+    <string name="success_title">Success</string>
+
+    <string name="enter_email_instruction">Enter your email to receive a 6-digit reset code</string>
+    <string name="send_code_button">Send Code</string>
+
+    <string name="enter_code_instruction">A 6-digit code was sent to %1$s. Enter it below:</string>
+    <string name="verification_code_label">Verification Code</string>
+    <string name="verify_code_button">Verify Code</string>
+
+    <string name="set_new_password_instruction">Almost done! Set your new password:</string>
+    <string name="new_password_label">New Password</string>
+    <string name="update_password_button">Update Password</string>
+
+    <string name="password_updated_success">Password updated successfully!</string>
+    <string name="return_to_login">Return to Login</string>
+
+
+
+
+    <!-- News Feed -->
+    <string name="category_economics">Economics</string>
+    <string name="category_politics">Politics</string>
+    <string name="category_science">Science</string>
+    <string name="category_health">Health</string>
+    <string name="category_sports">Sports</string>
+    <string name="category_climate">Climate</string>
+    <string name="category_business">Business</string>
+    <string name="category_technology">Technology</string>
+    <string name="All">all</string>
+    <string name="No_results">No results</string>
+    <string name="No_news_found_for">No news found for </string>
+    <string name="No_matches_found">No matches found</string>
+    <string name="No_news_available">No news available</string>
+    <string name="Clear">Clear</string>
+    <string name="Read_more">Read more</string>
+    <string name="days_ago">days ago</string>
+    <string name="Unknown_source">Unknown source</string>
+    <string name="Author">Author</string>
+    <string name="Verified_author">Verified author</string>
+    <string name="Reliability">Reliability</string>
+    <string name="View_details">View details</string>
+    <string name="Filter">Filter</string>
+    <string name="Clear_search">Clear search</string>
+    <string name="Search">Search</string>
+    <string name="Search_news">Search news...</string>
+    <string name="Clear_filter">Clear filter</string>
+    <string name="Filtered_by">Filtered by</string>
+    <string name="article">article</string>
+    <string name="articles">articles</string>
+    <string name="found">found</string>
+    <string name="Dismiss">Dismiss</string>
+    <string name="Refreshing_news">Refresing news...</string>
+    <string name="Connection_restored">Connection restored</string>
+    <string name="Submit">Submit</string>
+    <string name="Article_published">Article published</string>
+    <string name="Cancel">Cancel</string>
+    <string name="Category">Category</string>
+    <string name="Select_Category">Select a Category</string>
+    <string name="Add_an_article">Add an article</string>
+    <string name="Refresh">Refresh</string>
+    <string name="No_news_in">No news in</string>
+    <string name="No_news">No news</string>
+    <string name="Loading_news">Loading news...</string>
+    <string name="Add">Add</string>
+    <string name="Filter_by_country">By countries</string>
+    <string name="By_scope">By scope</string>
+    <string name="Local">Local</string>
+    <string name="International">International</string>
+    <string name="Submit_a_request">Submit a request</string>
+    <string name="Type">type</string>
+    <string name="Description">Description</string>
+    <string name="Select_a_type">Select a type</string>
+    <string name="petition">petition</string>
+    <string name="claim">claim</string>
+    <string name="suggestion">suggestion</string>
+    <string name="complaint">complaint</string>
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- News Detail -->
+    <string name="By">by</string>
+    <string name="at">at</string>
+    <string name="Published">Published</string>
+    <string name="total_ratings">total ratings</string>
+    <string name="Source">Source</string>
+    <string name="Add_comment">Add a comment</string>
+    <string name="Ratings_and_comments">Ratings and comments</string>
+    <string name="News_Details">News Details</string>
+    <string name="Comment">Comment</string>
+    <string name="Value">Value</string>
+    <!-- Guide tips -->
+    <string name="Guide_to_Identify_Fake_News">Guide to Identify Fake News</string>
+    <string name="Learn_to_detect_misinformation_and_manipulated_content">Learn to detect misinformation and manipulated content</string>
+    <string name="Examine_the_source">Examine the source</string>
+    <string name="Verify_if_the_website_is_known_and_reliable._Check_the_About_section_to_learn_more_about_the_organization.">Verify if the website is known and reliable. Check the "About" section to learn more about the organization.</string>
+    <string name="Basic">Basic</string>
+    <string name="Intermediate">Intermediate</string>
+    <string name="Advanced">Advanced</string>
+    <string name="Search_multiple_sources">Search multiple sources</string>
+    <string name="Real_">Real news are usually reported by multiple reliable media outlets. If it only appears on one site, be suspicious.</string>
+    <string name="Verify_the_author">Verify the author</string>
+    <string name="Look_up_info">Look up information about the journalist or author. Professionals usually have verifiable online presence.</string>
+    <string name="Beware_of_sensationalist_headlines">Beware of sensationalist headlines</string>
+    <string name="Overly_emotional_titles_or_those_with_ALL_CAPS_are_usually_indicators_of_questionable_content.">Overly emotional titles or those with ALL CAPS are usually indicators of questionable content.</string>
+    <string name="Check_the_dates">Check the dates</string>
+    <string name="Make_sure_the_information_">Make sure the information is current. Sometimes old news are recycled as if there were recent</string>
+    <string name="Use_verification_tools">Use verification tools</string>
+    <string name="Use_fact_checking_sites_">Use fact-checking sites like Snopes, PolitiFact, or Punto Neutro.</string>
+    <string name="Warning_Signs">Warning Signs</string>
+    <string name="Strange_URLs_or_many_spelling_errors">Strange URLs or many spelling errors</string>
+    <string name="Images_that_dont_match_the_text">Images that do not match the text</string>
+    <string name="Missing_date_or_clearly_identified_author">Missing date or clearly identified author</string>
+    <string name="Verification_Process">Verification Process</string>
+    <string name="First_reading">First reading</string>
+    <string name="Read_the_title_and_first_paragraph.">Read the title and first paragraph. Does it seem credible to you?</string>
+    <string name="Verify_the_source">Verify the source</string>
+    <string name="Research_who_published_the_information_and_their_reputation.">Research who published the information and their reputation.</string>
+    <string name="Look_for_corroboration">Look for corroboration</string>
+    <string name="Search_for_the_same_news_in_other_reliable_media_outlets.">Search for the same news in other reliable media outlets.</string>
+    <string name="Analyze_the_images">Analyze the images</string>
+    <string name="Use_reverse_image_search_to_verify_their_origin.">Use reverse image search to verify their origin.</string>
+    <string name="Consult_experts">Consult experts</string>
+    <string name="Look_for_opinions_from_specialists_on_the_topic_covered.">Look for opinions from specialists on the topic covered.</string>
+    <string name="Recommended_Tools">Recommended Tools</string>
+    <string name="Punto_Neutro_AI">Punto Neutro AI (coming in the future)</string>
+    <string name="Reverse_Search">Reverse Search</string>
+    <string name="Verify_the_origin_and_authenticity_of_images">Verify the origin and authenticity of images</string>
+
+
+
+
+
+
+
+    <!-- Boton navigation bar -->
+    <string name="Home">Home</string>
+    <string name="Profile">Profile</string>
+    <string name="Guide">Guide</string>
+
+
+
+        <!-- Countries -->
+        <string name="country_afghanistan">Afghanistan</string>
+        <string name="country_albania">Albania</string>
+        <string name="country_algeria">Algeria</string>
+        <string name="country_andorra">Andorra</string>
+        <string name="country_angola">Angola</string>
+        <string name="country_antigua_and_barbuda">Antigua and Barbuda</string>
+        <string name="country_argentina">Argentina</string>
+        <string name="country_armenia">Armenia</string>
+        <string name="country_australia">Australia</string>
+        <string name="country_austria">Austria</string>
+        <string name="country_azerbaijan">Azerbaijan</string>
+        <string name="country_bahamas">Bahamas</string>
+        <string name="country_bahrain">Bahrain</string>
+        <string name="country_bangladesh">Bangladesh</string>
+        <string name="country_barbados">Barbados</string>
+        <string name="country_belarus">Belarus</string>
+        <string name="country_belgium">Belgium</string>
+        <string name="country_belize">Belize</string>
+        <string name="country_benin">Benin</string>
+        <string name="country_bhutan">Bhutan</string>
+        <string name="country_bolivia">Bolivia</string>
+        <string name="country_bosnia_and_herzegovina">Bosnia and Herzegovina</string>
+        <string name="country_botswana">Botswana</string>
+        <string name="country_brazil">Brazil</string>
+        <string name="country_brunei">Brunei</string>
+        <string name="country_bulgaria">Bulgaria</string>
+        <string name="country_burkina_faso">Burkina Faso</string>
+        <string name="country_burundi">Burundi</string>
+        <string name="country_cabo_verde">Cabo Verde</string>
+        <string name="country_cambodia">Cambodia</string>
+        <string name="country_cameroon">Cameroon</string>
+        <string name="country_canada">Canada</string>
+        <string name="country_central_african_republic">Central African Republic</string>
+        <string name="country_chad">Chad</string>
+        <string name="country_chile">Chile</string>
+        <string name="country_china">China</string>
+        <string name="country_colombia">Colombia</string>
+        <string name="country_comoros">Comoros</string>
+        <string name="country_congo_dr">Congo (DRC)</string>
+        <string name="country_congo_republic">Congo (Republic)</string>
+        <string name="country_costa_rica">Costa Rica</string>
+        <string name="country_cote_divoire">Côte d\'Ivoire</string>
+        <string name="country_croatia">Croatia</string>
+        <string name="country_cuba">Cuba</string>
+        <string name="country_cyprus">Cyprus</string>
+        <string name="country_czech_republic">Czech Republic</string>
+        <string name="country_denmark">Denmark</string>
+        <string name="country_djibouti">Djibouti</string>
+        <string name="country_dominica">Dominica</string>
+        <string name="country_dominican_republic">Dominican Republic</string>
+        <string name="country_ecuador">Ecuador</string>
+        <string name="country_egypt">Egypt</string>
+        <string name="country_el_salvador">El Salvador</string>
+        <string name="country_equatorial_guinea">Equatorial Guinea</string>
+        <string name="country_eritrea">Eritrea</string>
+        <string name="country_estonia">Estonia</string>
+        <string name="country_eswatini">Eswatini</string>
+        <string name="country_ethiopia">Ethiopia</string>
+        <string name="country_fiji">Fiji</string>
+        <string name="country_finland">Finland</string>
+        <string name="country_france">France</string>
+        <string name="country_gabon">Gabon</string>
+        <string name="country_gambia">Gambia</string>
+        <string name="country_georgia">Georgia</string>
+        <string name="country_germany">Germany</string>
+        <string name="country_ghana">Ghana</string>
+        <string name="country_greece">Greece</string>
+        <string name="country_grenada">Grenada</string>
+        <string name="country_guatemala">Guatemala</string>
+        <string name="country_guinea">Guinea</string>
+        <string name="country_guinea_bissau">Guinea-Bissau</string>
+        <string name="country_guyana">Guyana</string>
+        <string name="country_haiti">Haiti</string>
+        <string name="country_honduras">Honduras</string>
+        <string name="country_hungary">Hungary</string>
+        <string name="country_iceland">Iceland</string>
+        <string name="country_india">India</string>
+        <string name="country_indonesia">Indonesia</string>
+        <string name="country_iran">Iran</string>
+        <string name="country_iraq">Iraq</string>
+        <string name="country_ireland">Ireland</string>
+        <string name="country_israel">Israel</string>
+        <string name="country_italy">Italy</string>
+        <string name="country_jamaica">Jamaica</string>
+        <string name="country_japan">Japan</string>
+        <string name="country_jordan">Jordan</string>
+        <string name="country_kazakhstan">Kazakhstan</string>
+        <string name="country_kenya">Kenya</string>
+        <string name="country_kiribati">Kiribati</string>
+        <string name="country_kuwait">Kuwait</string>
+        <string name="country_kyrgyzstan">Kyrgyzstan</string>
+        <string name="country_laos">Laos</string>
+        <string name="country_latvia">Latvia</string>
+        <string name="country_lebanon">Lebanon</string>
+        <string name="country_lesotho">Lesotho</string>
+        <string name="country_liberia">Liberia</string>
+        <string name="country_libya">Libya</string>
+        <string name="country_liechtenstein">Liechtenstein</string>
+        <string name="country_lithuania">Lithuania</string>
+        <string name="country_luxembourg">Luxembourg</string>
+        <string name="country_madagascar">Madagascar</string>
+        <string name="country_malawi">Malawi</string>
+        <string name="country_malaysia">Malaysia</string>
+        <string name="country_maldives">Maldives</string>
+        <string name="country_mali">Mali</string>
+        <string name="country_malta">Malta</string>
+        <string name="country_marshall_islands">Marshall Islands</string>
+        <string name="country_mauritania">Mauritania</string>
+        <string name="country_mauritius">Mauritius</string>
+        <string name="country_mexico">Mexico</string>
+        <string name="country_micronesia">Micronesia</string>
+        <string name="country_moldova">Moldova</string>
+        <string name="country_monaco">Monaco</string>
+        <string name="country_mongolia">Mongolia</string>
+        <string name="country_montenegro">Montenegro</string>
+        <string name="country_morocco">Morocco</string>
+        <string name="country_mozambique">Mozambique</string>
+        <string name="country_myanmar">Myanmar</string>
+        <string name="country_namibia">Namibia</string>
+        <string name="country_nauru">Nauru</string>
+        <string name="country_nepal">Nepal</string>
+        <string name="country_netherlands">Netherlands</string>
+        <string name="country_new_zealand">New Zealand</string>
+        <string name="country_nicaragua">Nicaragua</string>
+        <string name="country_niger">Niger</string>
+        <string name="country_nigeria">Nigeria</string>
+        <string name="country_north_korea">North Korea</string>
+        <string name="country_north_macedonia">North Macedonia</string>
+        <string name="country_norway">Norway</string>
+        <string name="country_oman">Oman</string>
+        <string name="country_pakistan">Pakistan</string>
+        <string name="country_palau">Palau</string>
+        <string name="country_palestine_state">Palestine State</string>
+        <string name="country_panama">Panama</string>
+        <string name="country_papua_new_guinea">Papua New Guinea</string>
+        <string name="country_paraguay">Paraguay</string>
+        <string name="country_peru">Peru</string>
+        <string name="country_philippines">Philippines</string>
+        <string name="country_poland">Poland</string>
+        <string name="country_portugal">Portugal</string>
+        <string name="country_qatar">Qatar</string>
+        <string name="country_romania">Romania</string>
+        <string name="country_russia">Russia</string>
+        <string name="country_rwanda">Rwanda</string>
+        <string name="country_saint_kitts_and_nevis">Saint Kitts and Nevis</string>
+        <string name="country_saint_lucia">Saint Lucia</string>
+        <string name="country_saint_vincent_and_the_grenadines">Saint Vincent and the Grenadines</string>
+        <string name="country_samoa">Samoa</string>
+        <string name="country_san_marino">San Marino</string>
+        <string name="country_sao_tome_and_principe">Sao Tome and Principe</string>
+        <string name="country_saudi_arabia">Saudi Arabia</string>
+        <string name="country_senegal">Senegal</string>
+        <string name="country_serbia">Serbia</string>
+        <string name="country_seychelles">Seychelles</string>
+        <string name="country_sierra_leone">Sierra Leone</string>
+        <string name="country_singapore">Singapore</string>
+        <string name="country_slovakia">Slovakia</string>
+        <string name="country_slovenia">Slovenia</string>
+        <string name="country_solomon_islands">Solomon Islands</string>
+        <string name="country_somalia">Somalia</string>
+        <string name="country_south_africa">South Africa</string>
+        <string name="country_south_korea">South Korea</string>
+        <string name="country_south_sudan">South Sudan</string>
+        <string name="country_spain">Spain</string>
+        <string name="country_sri_lanka">Sri Lanka</string>
+        <string name="country_sudan">Sudan</string>
+        <string name="country_suriname">Suriname</string>
+        <string name="country_sweden">Sweden</string>
+        <string name="country_switzerland">Switzerland</string>
+        <string name="country_syria">Syria</string>
+        <string name="country_taiwan">Taiwan</string>
+        <string name="country_tajikistan">Tajikistan</string>
+        <string name="country_tanzania">Tanzania</string>
+        <string name="country_thailand">Thailand</string>
+        <string name="country_timor_leste">Timor-Leste</string>
+        <string name="country_togo">Togo</string>
+        <string name="country_tonga">Tonga</string>
+        <string name="country_trinidad_and_tobago">Trinidad and Tobago</string>
+        <string name="country_tunisia">Tunisia</string>
+        <string name="country_turkey">Turkey</string>
+        <string name="country_turkmenistan">Turkmenistan</string>
+        <string name="country_tuvalu">Tuvalu</string>
+        <string name="country_uganda">Uganda</string>
+        <string name="country_ukraine">Ukraine</string>
+        <string name="country_united_arab_emirates">United Arab Emirates</string>
+        <string name="country_united_kingdom">United Kingdom</string>
+        <string name="country_united_states">United States</string>
+        <string name="country_uruguay">Uruguay</string>
+        <string name="country_uzbekistan">Uzbekistan</string>
+        <string name="country_vanuatu">Vanuatu</string>
+        <string name="country_vatican_city">Vatican City</string>
+        <string name="country_venezuela">Venezuela</string>
+        <string name="country_vietnam">Vietnam</string>
+        <string name="country_yemen">Yemen</string>
+        <string name="country_zambia">Zambia</string>
+        <string name="country_zimbabwe">Zimbabwe</string>
+
+
+
+
+
+
+
+
 </resources>

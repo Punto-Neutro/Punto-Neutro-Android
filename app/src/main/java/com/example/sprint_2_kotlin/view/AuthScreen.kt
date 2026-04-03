@@ -1,7 +1,10 @@
 package com.example.sprint_2_kotlin.view
 
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,12 +13,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -24,24 +29,48 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import co.yml.charts.common.extensions.isNotNull
 import com.example.sprint_2_kotlin.R
 import com.example.sprint_2_kotlin.model.auth.BiometricAuthManager
+import com.example.sprint_2_kotlin.model.data.Category
+import com.example.sprint_2_kotlin.model.data.Country
 import com.example.sprint_2_kotlin.viewmodel.AuthViewModel
+import utils.getTranslatedCategoryName
+import utils.getTranslatedCountryName
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = viewModel(),
-    onLoginSuccess: () -> Unit = {}
+    onLoginSuccess: () -> Unit = {},
+    onForgotPassword: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     var isLoginMode by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
+    var succesMessage by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val biometricManager = remember {
         BiometricAuthManager(context as FragmentActivity)
     }
+
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCountry by remember { mutableStateOf<Country?>(null) }
+    val countries by viewModel.countries.collectAsState()
+
+    // State to manage the language dropdown
+    val surfaceColor = Color.White
+    val textColor =  Color(0xFF1A1A1A)
+    val secondaryTextColor =  Color(0xFF666666)
+
+
+    var languageExpanded by remember { mutableStateOf(false) }
+    val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "en" }
+    var selectedLanguage by remember { mutableStateOf(currentLocale) }
+
+
 
     // Navigation check - auto navigate if session exists
     LaunchedEffect(state.isSuccess, state.isCheckingSession) {
@@ -68,7 +97,7 @@ fun AuthScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Logging in automatically...",
+                    text = stringResource(R.string.Login_in_automatically),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF666666)
                 )
@@ -118,7 +147,7 @@ fun AuthScreen(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "Fighting misinformation",
+                    text = stringResource(R.string.Fighting_misinformation),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF666666)
                 )
@@ -126,7 +155,7 @@ fun AuthScreen(
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    text = "A collaborative platform where the community verifies news in real-time to combat disinformation.",
+                    text = stringResource(R.string.A_collaborative_platform_where___),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888),
                     textAlign = TextAlign.Center,
@@ -154,17 +183,80 @@ fun AuthScreen(
                 Spacer(Modifier.height(16.dp))
 
                 //  Features Lista
-                FeatureItem("Source credibility analysis")
+                FeatureItem(stringResource(R.string.Source_credibility))
                 Spacer(Modifier.height(6.dp))
-                FeatureItem("Real-time collaborative verification")
+                FeatureItem(stringResource(R.string.Realtime_collaborative_verification))
                 Spacer(Modifier.height(6.dp))
-                FeatureItem("Network of verified users")
+                FeatureItem(stringResource(R.string.Network_of_verified_users))
 
                 Spacer(Modifier.height(24.dp))
 
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { languageExpanded = true } // Make the whole row clickable
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = "Language",
+                        tint = textColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = stringResource(id = R.string.Change_Language),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = textColor
+                        )
+                        Text(
+                            text = if (selectedLanguage.startsWith("es")) "Español" else "English",
+                            fontSize = 12.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
+
+                // Dropdown Menu for selecting language
+                Box {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Change Language",
+                        tint = secondaryTextColor
+                    )
+                    DropdownMenu(
+                        expanded = languageExpanded,
+                        onDismissRequest = { languageExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("English") },
+                            onClick = {
+                                LanguageManager.setLanguage("en")
+                                selectedLanguage = "en"
+
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Español") },
+                            onClick = {
+                                LanguageManager.setLanguage("es")
+                                selectedLanguage = "es"
+                            }
+                        )
+                    }
+                }
+
+            }
+
                 //  "Access your account" section
                 Text(
-                    text = "Access your account",
+                    text = stringResource(R.string.Access_your_account),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF1A1A1A)
@@ -173,7 +265,7 @@ fun AuthScreen(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "Enter your credentials to continue",
+                    text = stringResource(R.string.Enter_your_credentials_to_continue),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF888888)
                 )
@@ -186,20 +278,22 @@ fun AuthScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TabButton(
-                        text = "Sign In",
+                        text = stringResource(R.string.Sign_in),
                         selected = isLoginMode,
                         onClick = {
                             isLoginMode = true
                             errorMessage = ""
+                            succesMessage = ""
                         },
                         modifier = Modifier.weight(1f)
                     )
                     TabButton(
-                        text = "Register",
+                        text = stringResource(R.string.Register),
                         selected = !isLoginMode,
                         onClick = {
                             isLoginMode = false
                             errorMessage = ""
+                            succesMessage = ""
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -209,7 +303,7 @@ fun AuthScreen(
 
                 // el Email Input
                 Text(
-                    text = "Email",
+                    text = stringResource(R.string.Email),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF1A1A1A),
                     fontWeight = FontWeight.Medium,
@@ -221,7 +315,7 @@ fun AuthScreen(
                 OutlinedTextField(
                     value = state.email,
                     onValueChange = viewModel::onEmailChange,
-                    placeholder = { Text("you@example.com", color = Color(0xFFBBBBBB)) },
+                    placeholder = { Text(stringResource(R.string.You_example_com), color = Color(0xFFBBBBBB)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
@@ -235,7 +329,7 @@ fun AuthScreen(
 
                 // el Password Input
                 Text(
-                    text = "Password",
+                    text = stringResource(R.string.Password),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF1A1A1A),
                     fontWeight = FontWeight.Medium,
@@ -243,6 +337,8 @@ fun AuthScreen(
                 )
 
                 Spacer(Modifier.height(6.dp))
+
+
 
                 OutlinedTextField(
                     value = state.password,
@@ -267,13 +363,79 @@ fun AuthScreen(
                     )
                 )
 
+                Spacer(Modifier.height(16.dp))
+
+                if(!isLoginMode){
+
+                    Text(
+                        text = stringResource(R.string.Country),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF1A1A1A),
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+
+
+                    Spacer(Modifier.height(16.dp))
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        OutlinedTextField(
+                            value =  selectedCountry?.let { getTranslatedCountryName(it.country_name) } ?: stringResource(R.string.Select_Your_Country) ,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            countries.forEach { country ->
+                                DropdownMenuItem(
+                                    text = { Text(getTranslatedCountryName(country.country_name)) },
+                                    onClick = {
+                                        selectedCountry = country
+                                        expanded = false
+                                        Log.d(TAG, "Selected country = ${selectedCountry?.country_name}")
+                                        Log.d(TAG, "Selected country id= ${selectedCountry?.id}")
+
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(20.dp))
+
+
 
                 // Main Action Button negro
                 Button(
                     onClick = {
                         errorMessage = ""
-                        if (isLoginMode) viewModel.login() else viewModel.register()
+                        succesMessage = ""
+                        if (isLoginMode) {
+                            viewModel.login()
+                        } else {
+                            // Add a check to ensure a country is selected
+                            if (selectedCountry?.id == null) {
+                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
+                                errorMessage = "Please select a country." // Show an error
+
+                            } else if (state.password.length < 6) {
+                                errorMessage = "Password must be at least 6 characters."
+
+                            }else {
+                                succesMessage = "Register successful verify email before logging in"
+                                Log.d(TAG, "Selected country = ${selectedCountry?.id}")
+                                viewModel.register(selectedCountry!!.id) } }
                     },
                     enabled = !state.isLoading,
                     modifier = Modifier
@@ -293,7 +455,7 @@ fun AuthScreen(
                         )
                     } else {
                         Text(
-                            text = if (isLoginMode) "Sign In" else "Register",
+                            text = if (isLoginMode) stringResource(R.string.Sign_in) else stringResource(R.string.Register),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -328,7 +490,7 @@ fun AuthScreen(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Sign in with Fingerprint",
+                            text = stringResource(R.string.Sign_in) + " " + stringResource(R.string.With_fingerprint),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -339,16 +501,18 @@ fun AuthScreen(
                 if (isLoginMode) {
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { /* TODO: Implement forgot password */ }) {
-                        Text(
-                            text = "Forgot your password?",
-                            color = Color(0xFF666666),
-                            fontSize = 14.sp
+                        // Inside AuthScreen.kt
+                        Text(text = stringResource(R.string.Forgot_Password),
+                            modifier = Modifier
+                                .clickable { onForgotPassword() }, // Add navigation
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF000000)
                         )
                     }
                 }
 
                 //  Error message display (local errors from biometric)
-                if (errorMessage.isNotEmpty()) {
+                if (errorMessage.isNotEmpty() || state.errorMessage.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -367,8 +531,35 @@ fun AuthScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = errorMessage,
+                                text = errorMessage + state.errorMessage,
                                 color = Color(0xFFD32F2F),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                if (succesMessage.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF90EE90)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mail,
+                                contentDescription = "Success",
+                                tint = Color(0xFF00913F),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = succesMessage,
+                                color = Color(0xFF00913F),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
