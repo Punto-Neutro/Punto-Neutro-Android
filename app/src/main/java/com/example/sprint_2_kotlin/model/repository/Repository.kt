@@ -299,7 +299,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
              return 1  }
 
          }else{
-         daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = 0, commentText = comment, reliabilityScore = rating))
+         daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = "", commentText = comment, reliabilityScore = rating))
              Log.w(TAG,"Se activo el encolamiento")
              return 2
 
@@ -451,7 +451,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 return 1  }
 
         }else{
-            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = 0, title = "", short_description = "", image_url = "", category_id = category_id, country_id = country, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
+            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = "", title = "", short_description = "", image_url = "", category_id = category_id, country_id = country, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
             Log.w(TAG,"Se activo el encolamiento")
             return 2
 
@@ -1273,7 +1273,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
                 return 1  }
 
         }else{
-            daopqrs.insert(PQRS(user_id = 0, description = description, type_id = type_id, ))
+            daopqrs.insert(PQRS(user_id = "", description = description, type_id = type_id, ))
             Log.w(TAG,"Se activo el encolamiento")
             return 2
 
@@ -1382,7 +1382,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
     // Bookmark functions
     //========================================================
 
-    suspend fun addBookmarks(user_id: Int, news_item_id: Int,image_url: String,title: String,category_id: Int,short_description: String): Int{
+    suspend fun addBookmarks(user_id: String, news_item_id: Int,image_url: String,title: String,category_id: Int,short_description: String): Int{
 
         if (networkMonitor.isConnected.value){
             try {
@@ -1414,7 +1414,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
                 return 1  }
 
         }else{
-            bookmarksDao.insertBookmark(BookmarkEntity(userid = 0, shortDescription = short_description, newsItemId = news_item_id, imageUrl = image_url, title = title, categoryId = category_id ))
+            bookmarksDao.insertBookmark(BookmarkEntity(userid = "", shortDescription = short_description, newsItemId = news_item_id, imageUrl = image_url, title = title, categoryId = category_id ))
             Log.w(TAG,"Se activo el encolamiento")
             return 2
 
@@ -1472,7 +1472,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
                 Log.d(TAG, "Cache cleared due to force refresh")
             }
 
-            val userid: Int? = getCurrentUserProfileId()
+            val userid: String? = getCurrentUserProfileId()
 
 
             // If cache is empty, fetch from Supabase
@@ -1508,7 +1508,7 @@ suspend fun extractAuthorInstitution(url: String): String? {
     // User functions
     //========================================================
 
-    suspend fun getCurrentUserProfileId(): Int? {
+    suspend fun getCurrentUserProfileId(): String? {
         return try {
             val user = client.auth.currentUserOrNull()?.id
             if (user == null) {

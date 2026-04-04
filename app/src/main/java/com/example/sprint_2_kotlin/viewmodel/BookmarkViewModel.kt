@@ -195,7 +195,7 @@ class BookmarkViewModel(
     /**
      * Remove bookmark (Local-First)
      */
-    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: Int?, shortDescription: String, imageUrl: String, title: String) {
+    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: String?, shortDescription: String, imageUrl: String, title: String) {
         val syncOperation = BookmarkSyncQueueEntity(
             newsItemId = newsItemId,
             operationType = BookmarkSyncQueueEntity.OperationType.REMOVE,

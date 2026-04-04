@@ -152,11 +152,11 @@ fun AuthScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 //  Logo y Header
-                Icon(
-                    imageVector = Icons.Default.Description,
+                Image(
+                    painter = painterResource(id = R.drawable.logoneutro),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(48.dp),
-                    tint = Color(0xFF1A1A1A)
+                    modifier = Modifier.width(60.dp).height(60.dp),
+                    contentScale = ContentScale.Crop
                 )
 
                 Spacer(Modifier.height(8.dp))
