@@ -35,8 +35,11 @@ import com.example.sprint_2_kotlin.model.auth.BiometricAuthManager
 import com.example.sprint_2_kotlin.model.data.Category
 import com.example.sprint_2_kotlin.model.data.Country
 import com.example.sprint_2_kotlin.viewmodel.AuthViewModel
+import kotlinx.coroutines.delay
+import okhttp3.internal.wait
 import utils.getTranslatedCategoryName
 import utils.getTranslatedCountryName
+import kotlin.text.lowercase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +63,8 @@ fun AuthScreen(
     var selectedCountry by remember { mutableStateOf<Country?>(null) }
     val countries by viewModel.countries.collectAsState()
 
+
+
     // State to manage the language dropdown
     val surfaceColor = Color.White
     val textColor =  Color(0xFF1A1A1A)
@@ -69,6 +74,25 @@ fun AuthScreen(
     var languageExpanded by remember { mutableStateOf(false) }
     val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales().toLanguageTags().ifEmpty { "en" }
     var selectedLanguage by remember { mutableStateOf(currentLocale) }
+
+    val sortedCountries = remember(countries, selectedLanguage) {
+        countries.sortedBy { country ->
+            // Note: We need a non-composable way to get the string if sorting outside of composition,
+            // but since we are in a remember block, we can use context.getString
+            context.getString(
+                context.resources.getIdentifier(
+                    "country_${country.country_name.lowercase().replace(" ", "_")}",
+                    "string",
+                    context.packageName
+                ).let { if (it == 0) R.string.Country else it } // fallback
+            )
+        }
+    }
+
+    LaunchedEffect(Unit){
+        delay(500L)
+        viewModel.checkExistingSession()
+    }
 
 
 
@@ -128,11 +152,11 @@ fun AuthScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 //  Logo y Header
-                Icon(
-                    imageVector = Icons.Default.Description,
+                Image(
+                    painter = painterResource(id = R.drawable.logoneutro),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(48.dp),
-                    tint = Color(0xFF1A1A1A)
+                    modifier = Modifier.width(60.dp).height(60.dp),
+                    contentScale = ContentScale.Crop
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -396,7 +420,7 @@ fun AuthScreen(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
-                            countries.forEach { country ->
+                            sortedCountries.forEach { country ->
                                 DropdownMenuItem(
                                     text = { Text(getTranslatedCountryName(country.country_name)) },
                                     onClick = {

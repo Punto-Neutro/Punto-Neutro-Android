@@ -23,7 +23,7 @@ interface BookmarkDao {
      * Check if a news item is bookmarked
      */
     @Query("SELECT EXISTS(SELECT 1 FROM bookmarks WHERE newsItemId = :newsItemId AND userid = :userProfileId)")
-    suspend fun isBookmarked(newsItemId: Int, userProfileId: Int?): Boolean
+    suspend fun isBookmarked(newsItemId: Int, userProfileId: String?): Boolean
 
     /**
      * Get a specific bookmark

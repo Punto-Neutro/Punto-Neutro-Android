@@ -155,6 +155,7 @@ class BookmarkViewModel(
                     removeBookmark(newsItem.news_item_id, newsItem.category_id, userid, newsItem.short_description, newsItem.image_url, newsItem.title)
                 } else {
                     addBookmark(newsItem)
+                    Log.d(TAG, "Bookmark added: ${newsItem.news_item_id}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error toggling bookmark", e)
@@ -194,7 +195,7 @@ class BookmarkViewModel(
     /**
      * Remove bookmark (Local-First)
      */
-    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: Int?, shortDescription: String, imageUrl: String, title: String) {
+    private suspend fun removeBookmark(newsItemId: Int, categoryId: Int, userId: String?, shortDescription: String, imageUrl: String, title: String) {
         val syncOperation = BookmarkSyncQueueEntity(
             newsItemId = newsItemId,
             operationType = BookmarkSyncQueueEntity.OperationType.REMOVE,
