@@ -15,7 +15,7 @@ data class BookmarkSyncQueueEntity(
 
     val newsItemId: Int,              // ID of the news item
     val categoryId: Int,              // Category ID
-    val userId: Int?,                  // User ID
+    val userId: String?,                  // User ID
     val shortDescription: String,     // Short description
     val imageUrl: String,             // Image URL
     val title: String,                // Title

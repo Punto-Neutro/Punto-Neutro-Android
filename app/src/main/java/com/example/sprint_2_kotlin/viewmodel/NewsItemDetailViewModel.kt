@@ -144,10 +144,10 @@ class NewsItemDetailViewModel(
         viewModelScope.launch {
             networkMonitor.isConnected.collect { connected ->
                 _isConnected.value = connected
-                if (connected) {repository.syncPendingComments()
+                if (connected) {
+                    repository.syncPendingComments()
                     repository.syncPendingNews()
-                    repository.clearCache()
-                    loadNewsItemById(newsItemid)}
+                    }
 
 
 

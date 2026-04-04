@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 data class PendingComment(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val newsItemId: Int,
-    val userProfileId: Int,
+    val userProfileId: String,
     val reliabilityScore: Double,
     val commentText: String
 )

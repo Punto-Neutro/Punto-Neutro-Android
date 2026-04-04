@@ -19,7 +19,7 @@ data class BookmarkEntity(
     val shortDescription: String,     // Short description
     val imageUrl: String,             // Image URL for thumbnail
     val categoryId: Int,              // Category ID
-    val userid: Int,                  // User ID
+    val userid: String,                  // User ID
 
     // Timestamps
 

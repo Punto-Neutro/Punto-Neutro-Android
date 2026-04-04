@@ -114,6 +114,10 @@ interface NewsItemDao {
     ORDER BY publication_date DESC
 """)
     fun searchNewsItems(searchQuery: String): Flow<List<NewsItemEntity>>
+
+    @Query("UPDATE news_items SET average_reliability_score = :newAverageReliabilityScore WHERE news_item_id = :newsItemId")
+    suspend fun updateReliabilityScore(newsItemId: Int, newAverageReliabilityScore: Double)
+
 }
 
 

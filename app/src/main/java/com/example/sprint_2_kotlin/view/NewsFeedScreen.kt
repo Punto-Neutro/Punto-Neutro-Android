@@ -1,3 +1,5 @@
+@file:OptIn(FlowPreview::class)
+
 package com.example.sprint_2_kotlin.view
 
 import android.content.ContentValues.TAG
@@ -57,11 +59,19 @@ import com.example.sprint_2_kotlin.model.data.PQRS_types
 import utils.getTranslatedCategoryName
 import utils.getTranslatedCountryName
 import utils.getTranslatedPQRStypeame
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.SharedPreferences
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import java.util.prefs.Preferences
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsFeedScreen(
+    preferences: SharedPreferences,
     isDarkMode: Boolean = false,
     onNewsItemClick: (Int) -> Unit,
     onNavigateToGuide: () -> Unit = {},
@@ -70,7 +80,11 @@ fun NewsFeedScreen(
     modifier: Modifier = Modifier
 ) {
     val newsItems: List<NewsItem> by viewModel.newsItems.collectAsState()
-    val lazyListState = rememberLazyListState() // Add this state
+    val scrollposition = remember{ preferences.getInt("scroll_news", 0)}
+
+    val lazyListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = scrollposition
+    ) // Add this state
 
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -79,6 +93,25 @@ fun NewsFeedScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     val countries by viewModel.countries.collectAsState()
+    val context = LocalContext.current
+    val sortedCountries = remember(countries) {
+        countries.sortedBy { country ->
+            // Convert the database name (e.g., "United States") to resource key (e.g., "country_united_states")
+            val resourceKey = "country_${country.country_name.lowercase().replace(" ", "_")}"
+
+            // Find the ID of that string in the current language's strings.xml
+            val resId = context.resources.getIdentifier(
+                resourceKey,
+                "string",
+                context.packageName
+            )
+
+            // Fetch the actual translated string (e.g., "Estados Unidos" if in Spanish)
+            if (resId != 0) context.getString(resId) else country.country_name
+        }
+    }
+
+
     val pqrstypes by viewModel.pqrstypes.collectAsState()
     val connectionRestored by viewModel.connectionRestored.collectAsState()
     val noSearchResults by viewModel.noSearchResults.collectAsState()
@@ -97,7 +130,7 @@ fun NewsFeedScreen(
     if (showFilterDialog) {
         FilterDialog(
             isDarkMode = isDarkMode,
-            countries = countries,
+            countries = sortedCountries,
             selectedCountryIds = selectedCountryIds,
             selectedScope = newsScope,
             onCountrySelected = viewModel::onCountrySelected,
@@ -121,11 +154,17 @@ fun NewsFeedScreen(
 
 
 
+
+
+
+
+
+
     if (showDialog) {
         FeedbackDialog(
             isDarkMode = isDarkMode,
             categories = categories,
-            countries = countries,
+            countries = sortedCountries,
             onDismiss = { showDialog = false }
 
         )
@@ -147,8 +186,9 @@ fun NewsFeedScreen(
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF1A1A1A)
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
 
-    val context = LocalContext.current
+
     val networkMonitor = remember { NetworkMonitor(context) }
+
 
 
 
@@ -160,6 +200,7 @@ fun NewsFeedScreen(
     LaunchedEffect(newsItems.isEmpty() && !isLoading && !isRefreshing) {
         if (newsItems.isEmpty() && !isLoading && !isRefreshing) {
             viewModel.loadNewsItems(false)
+            Log.d(TAG, "LaunchedEffect: Loading news items")
         }
     }
 
@@ -167,6 +208,14 @@ fun NewsFeedScreen(
         if (shouldLoadMore.value && !newsItems.isEmpty()  ) {
             viewModel.loadNextPage()
         }
+    }
+
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .debounce(500) // Debounce for 500ms
+            .collectLatest { index ->
+                preferences.edit().putInt("scroll_news", index).apply()
+            }
     }
 
 
@@ -1287,7 +1336,7 @@ fun getCategoryColorDynamic(categoryId: Int): Color {
 fun getReliabilityColor(score: Double): Color {
     return when {
         score >= 0.8 -> Color(0xFF4CAF50)
-        score >= 0.6 -> Color(0xFFC107)
+        score >= 0.6 -> Color(0xFFFFC107)
         else -> Color(0xFFE53935)
     }
 }

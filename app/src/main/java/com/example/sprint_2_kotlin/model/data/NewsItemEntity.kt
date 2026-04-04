@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
 data class NewsItemEntity(
     @PrimaryKey
     val news_item_id: Int,
-    val user_profile_id: Int,
+    val user_profile_id: String,
     val title: String,
     val short_description: String,
     val image_url: String,

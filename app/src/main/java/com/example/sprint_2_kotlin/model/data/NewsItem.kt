@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 data class NewsItem(
 
     @SerialName("user_profile_id")
-    val user_profile_id: Int = 0,
+    val user_profile_id: String = "",
 
     val title: String = "",
 
