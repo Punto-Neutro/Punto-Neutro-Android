@@ -25,7 +25,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import utils.NetworkMonitor
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.IOException
+import java.net.URI
 import kotlin.collections.forEachIndexed
 import kotlin.collections.map
 import kotlin.math.floor
@@ -86,6 +88,7 @@ class Repository(private val context: Context,private val daocomment: CommentDao
 
     companion object {
         private const val TAG = "Repository"
+        private const val PLACEHOLDER_IMAGE_URL = "https://via.placeholder.com/600x400.png?text=No+Image+Available"
     }
 
     // ============================================
@@ -400,15 +403,12 @@ class Repository(private val context: Context,private val daocomment: CommentDao
                 val profile = profiles.first()
                 val userProfileIdActual = profile.user_profile_id
 
-                val imageUrl = extractImageUrlFromArticle(url) ?: ""
-
-                val title = extractTitle(url) ?: ""
-
-                val description = extractDescription(url) ?: ""
-
-                val author_type = extractAuthor(url) ?: ""
-
-                val author_institution = extractAuthorInstitution(url) ?: ""
+                val articleMetadata = extractArticleMetadata(url)
+                val imageUrl = articleMetadata.imageUrl
+                val title = articleMetadata.title
+                val description = articleMetadata.description
+                val author_type = articleMetadata.author
+                val author_institution = articleMetadata.institution
 
 
 
@@ -488,15 +488,12 @@ class Repository(private val context: Context,private val daocomment: CommentDao
             for (pendingItem in pendingNews) {
                 try {
                     // Fetch the image URL online, as it wasn't available offline
-                    val imageUrl = extractImageUrlFromArticle(pendingItem.original_source_url) ?: ""
-
-                    val title = extractTitle(pendingItem.original_source_url) ?: ""
-
-                    val description = extractDescription(pendingItem.original_source_url) ?: ""
-
-                    val author_type = extractAuthor(pendingItem.original_source_url) ?: ""
-
-                    val author_institution = extractAuthorInstitution(pendingItem.original_source_url) ?: ""
+                    val articleMetadata = extractArticleMetadata(pendingItem.original_source_url)
+                    val imageUrl = articleMetadata.imageUrl
+                    val title = articleMetadata.title
+                    val description = articleMetadata.description
+                    val author_type = articleMetadata.author
+                    val author_institution = articleMetadata.institution
 
                     // Create a NewsItem object for Supabase, mapping fields from NewsItemEntity
                     val newsItemToUpload = NewsItem(
@@ -1066,9 +1063,7 @@ suspend fun extractImageUrlFromArticle(url: String): String? {
     return withContext(Dispatchers.IO) { // Perform network operation on the IO thread
         try {
             // 1. Fetch and parse the HTML document
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36") // Be a good citizen
-                .get()
+            val doc = safeJsoupConnect(url).get()
 
             // 2. Look for the 'og:image' meta tag (most reliable)
             val ogImage = doc.select("meta[property=og:image]").attr("content")
@@ -1122,9 +1117,9 @@ suspend fun extractImageUrlFromArticle(url: String): String? {
 suspend fun extractTitle(url: String): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
-                .get()
+            val doc = safeJsoupConnect(url).get()
+
+
 
             // 1. Try Open Graph title
             val ogTitle = doc.select("meta[property=og:title]").attr("content")
@@ -1149,9 +1144,9 @@ suspend fun extractTitle(url: String): String? {
 suspend fun extractAuthor(url: String): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
-                .get()
+            val doc = safeJsoupConnect(url).get()
+
+
 
             // 1. Try standard author meta tags
             val author = doc.select("meta[name=author]").attr("content")
@@ -1176,9 +1171,8 @@ suspend fun extractAuthor(url: String): String? {
 suspend fun extractDescription(url: String): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
-                .get()
+            val doc = safeJsoupConnect(url).get()
+
 
             // 1. Try Open Graph description
             val ogDesc = doc.select("meta[property=og:description]").attr("content")
@@ -1209,9 +1203,7 @@ suspend fun extractDescription(url: String): String? {
 suspend fun extractAuthorInstitution(url: String): String? {
     return withContext(Dispatchers.IO) {
         try {
-            val doc = Jsoup.connect(url)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
-                .get()
+            val doc = safeJsoupConnect(url).get()
 
             // 1. Try Open Graph site name (Very common for news outlets)
             val ogSiteName = doc.select("meta[property=og:site_name]").attr("content")
@@ -1241,6 +1233,225 @@ suspend fun extractAuthorInstitution(url: String): String? {
     }
   }
 
+    private data class ArticleMetadata(
+        val imageUrl: String,
+        val title: String,
+        val description: String,
+        val author: String,
+        val institution: String
+    )
+
+    private suspend fun extractArticleMetadata(url: String): ArticleMetadata {
+        return withContext(Dispatchers.IO) {
+            try {
+                val doc = safeJsoupConnect(url).get()
+                Log.d(TAG, "Fetched article metadata from $url with HTTP ${doc.connection().response().statusCode()}")
+
+                ArticleMetadata(
+                    imageUrl = extractImageUrlFromDocument(doc, url),
+                    title = extractTitleFromDocument(doc) ?: "",
+                    description = extractDescriptionFromDocument(doc),
+                    author = extractAuthorFromDocument(doc),
+                    institution = extractInstitutionFromDocument(doc)
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error extracting article metadata from $url", e)
+                ArticleMetadata(
+                    imageUrl = PLACEHOLDER_IMAGE_URL,
+                    title = "",
+                    description = "Anonimo",
+                    author = "Anonimo",
+                    institution = "Anonimo"
+                )
+            }
+        }
+    }
+
+    private fun extractImageUrlFromDocument(doc: Document, url: String): String {
+        val ogImage = doc.select("meta[property=og:image]").attr("content")
+        if (ogImage.isNotBlank()) return resolveUrl(url, ogImage)
+
+        val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
+        if (twitterImage.isNotBlank()) return resolveUrl(url, twitterImage)
+
+        val imageSrc = doc.select("link[rel=image_src]").attr("href")
+        if (imageSrc.isNotBlank()) return resolveUrl(url, imageSrc)
+
+        val jsonLdImage = findJsonLdValue(doc, "image")
+        if (jsonLdImage.isNotBlank()) return resolveUrl(url, jsonLdImage)
+
+        val firstImage = doc.select("article img[src], main img[src]").first()?.attr("abs:src")
+        if (!firstImage.isNullOrBlank()) return firstImage
+
+        Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+        return PLACEHOLDER_IMAGE_URL
+    }
+
+    private fun extractTitleFromDocument(doc: Document): String? {
+        val ogTitle = doc.select("meta[property=og:title]").attr("content")
+        if (ogTitle.isNotBlank()) return ogTitle
+
+        val twitterTitle = doc.select("meta[name=twitter:title]").attr("content")
+        if (twitterTitle.isNotBlank()) return twitterTitle
+
+        val jsonLdTitle = findJsonLdValue(doc, "headline", "name")
+        if (jsonLdTitle.isNotBlank()) return jsonLdTitle
+
+        val docTitle = doc.title()
+        if (docTitle.isNotBlank()) return docTitle
+
+        return null
+    }
+
+    private fun extractAuthorFromDocument(doc: Document): String {
+        val author = doc.select("meta[name=author], meta[name=parsely-author]").attr("content")
+        if (author.isNotBlank()) return author
+
+        val ogAuthor = doc.select("meta[property=article:author]").attr("content")
+        if (ogAuthor.isNotBlank()) return ogAuthor
+
+        val jsonLdAuthor = findJsonLdValue(doc, "author")
+        if (jsonLdAuthor.isNotBlank()) return jsonLdAuthor
+
+        val htmlAuthor = doc.select("[class*=author], [id*=author], [class*=byline]").first()?.text()
+        if (!htmlAuthor.isNullOrBlank()) return htmlAuthor
+
+        return "Anonimo"
+    }
+
+    private fun extractDescriptionFromDocument(doc: Document): String {
+        val ogDesc = doc.select("meta[property=og:description]").attr("content")
+        if (ogDesc.isNotBlank()) return ogDesc
+
+        val metaDesc = doc.select("meta[name=description]").attr("content")
+        if (metaDesc.isNotBlank()) return metaDesc
+
+        val twitterDesc = doc.select("meta[name=twitter:description]").attr("content")
+        if (twitterDesc.isNotBlank()) return twitterDesc
+
+        val jsonLdDescription = findJsonLdValue(doc, "description")
+        if (jsonLdDescription.isNotBlank()) return jsonLdDescription
+
+        val firstParagraph = doc.select("article p, main p, .content p").first()?.text()
+        if (!firstParagraph.isNullOrBlank()) {
+            return if (firstParagraph.length > 200) firstParagraph.take(197) + "..." else firstParagraph
+        }
+
+        return "Anonimo"
+    }
+
+    private fun extractInstitutionFromDocument(doc: Document): String {
+        val ogSiteName = doc.select("meta[property=og:site_name]").attr("content")
+        if (ogSiteName.isNotBlank()) return ogSiteName
+
+        val publisher = doc.select("meta[name=publisher]").attr("content")
+        if (publisher.isNotBlank()) return publisher
+
+        val jsonLdPublisher = findJsonLdValue(doc, "publisher")
+        if (jsonLdPublisher.isNotBlank()) return jsonLdPublisher
+
+        val articlePublisher = doc.select("meta[property=article:publisher]").attr("content")
+        if (articlePublisher.isNotBlank()) {
+            return articlePublisher.substringAfterLast("/").replace("-", " ").capitalize()
+        }
+
+        val brandName = doc.select(".brand, .logo-text, [class*='source']").first()?.text()
+        if (!brandName.isNullOrBlank()) return brandName
+
+        return "Anonimo"
+    }
+
+    private fun findJsonLdValue(doc: Document, vararg keys: String): String {
+        doc.select("script[type=application/ld+json]").forEach { script ->
+            val json = script.data()
+            keys.forEach { key ->
+                val value = findSimpleJsonLdValue(json, key)
+                if (value.isNotBlank()) return value
+            }
+        }
+        return ""
+    }
+
+    private fun findSimpleJsonLdValue(json: String, key: String): String {
+        val objectWithNameRegex = Regex(
+            """"$key"\s*:\s*\{[^}]*"name"\s*:\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        objectWithNameRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        val arrayObjectWithNameRegex = Regex(
+            """"$key"\s*:\s*\[[^\]]*\{[^}]*"name"\s*:\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        arrayObjectWithNameRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        val arrayStringRegex = Regex(
+            """"$key"\s*:\s*\[\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        arrayStringRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        val stringRegex = Regex(
+            """"$key"\s*:\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        stringRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        return ""
+    }
+
+    private fun resolveUrl(baseUrl: String, value: String): String {
+        return try {
+            URI(baseUrl).resolve(value).toString()
+        } catch (_: Exception) {
+            value
+        }
+    }
+
+    // In Repository.kt
+
+    // In Repository.kt
+
+    /**
+     * Enhanced Jsoup connection that rotates between browser profiles
+     * to bypass bot detection.
+     */
+    private fun safeJsoupConnect(url: String): org.jsoup.Connection {
+        // List of high-quality, modern browser signatures
+        val browserProfiles = listOf(
+            // Chrome on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            // Firefox on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+            // Safari on macOS
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
+            // Edge on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
+        )
+
+        // Randomize the entry point
+        val referers = listOf(
+            "https://www.google.com/",
+            "https://t.co/", // Twitter
+            "https://www.bing.com/",
+            "https://www.reddit.com/"
+        )
+
+        return Jsoup.connect(url)
+            .userAgent(browserProfiles.random())
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+            .header("Accept-Language", "en-US,en;q=0.9,es-ES;q=0.8,es;q=0.7")
+            .header("Referer", referers.random())
+            .header("Sec-Fetch-Dest", "document")
+            .header("Sec-Fetch-Mode", "navigate")
+            .header("Sec-Fetch-Site", "cross-site")
+            .header("Upgrade-Insecure-Requests", "1")
+            .header("Cache-Control", "max-age=0")
+            .timeout(20000) // 20 seconds
+            .followRedirects(true)
+            .ignoreHttpErrors(true)
+            .ignoreContentType(true)
+    }
     // =======================================================
     // PQRS Functions
     // =======================================================
@@ -1473,6 +1684,8 @@ suspend fun extractAuthorInstitution(url: String): String? {
             }
 
             val userid: String? = getCurrentUserProfileId()
+
+            Log.d(TAG, "Current User ProfileID: $userid")
 
 
             // If cache is empty, fetch from Supabase
