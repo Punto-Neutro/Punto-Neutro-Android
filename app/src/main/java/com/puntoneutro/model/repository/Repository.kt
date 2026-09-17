@@ -1,0 +1,1850 @@
+package com.puntoneutro.model.repository
+
+import android.app.appfunctions.AppFunctionService
+import android.content.Context
+import android.util.Log
+
+import com.puntoneutro.model.data.*
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.functions.Functions
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.functions.functions
+import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import utils.NetworkMonitor
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import java.io.IOException
+import java.net.URI
+import kotlin.collections.forEachIndexed
+import kotlin.collections.map
+import kotlin.math.floor
+
+
+/**
+ * Repository with Cache-First Strategy for News Feed
+ * Maintains all existing Supabase functionality
+ */
+class Repository(private val context: Context,private val daocomment: CommentDao, private val daonewsitem: NewsItemDao, private val daopqrs: PQRSDao, private val daotypespqrs: PQRS_typesDao ) {
+
+    // ============================================
+    // SUPABASE CLIENT (EXISTING CODE - NO CHANGES)
+    // ============================================
+
+    private val client = createSupabaseClient(
+        supabaseUrl = "https://fyotaxqfpgbkyefapzya.supabase.co",
+        supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5b3RheHFmcGdia3llZmFwenlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MDMxNDIsImV4cCI6MjA4NzM3OTE0Mn0.Hvb--I3VLCkkhXAbMUaUC-O2SKbV9JyyUjFc3dmmxjU"
+    ) {
+        install(Postgrest)
+        install(Auth)
+        install(Functions)
+
+
+    }
+
+    private val auth = client.auth
+
+   // Monitor to verify internet connection
+    private val networkMonitor = NetworkMonitor(context)
+
+
+    // ============================================
+    // ROOM DATABASE (NEW - FOR CACHING)
+    // ============================================
+
+    private val database = AppDatabase.getDatabase(context)
+    private val newsItemDao = database.newsItemDao()
+
+    private val categoryDao = database.categoryDao()
+
+    private val countryDao = database.countryDao()
+
+    private val bookmarksDao = database.bookmarkDao()
+
+
+    // Cache expiration time: 30 minutes in milliseconds
+    private val CACHE_EXPIRATION_TIME = 30 * 60 * 1000L
+    // ============================================
+    // SEARCH QUERY CACHE (LRU + TTL)
+    // ============================================
+
+    /**
+     * LRU Cache for search queries with 24h TTL
+     * Stores query → list of news item IDs
+     */
+    private val searchQueryCache = SearchQueryCache(
+        maxSize = 50,  // Máximo 50 búsquedas en cache
+        ttlMillis = 24 * 60 * 60 * 1000  // 24 horas
+    )
+
+    companion object {
+        private const val TAG = "Repository"
+        private const val PLACEHOLDER_IMAGE_URL = "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+    }
+
+    // ============================================
+    // AUTH FUNCTIONS (EXISTING CODE - NO CHANGES)
+    // ============================================
+
+    suspend fun signIn(email: String, password: String): Boolean {
+        return try {
+            auth.signInWith(Email) {
+                this.email = email.lowercase()
+                this.password = password
+            }
+
+            bookmarksDao.deleteAll()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+
+
+    // In Repository.kt
+
+    // 1. Simplified SignUp: Just create the Auth account
+    suspend fun signUp(email: String, password: String): Boolean {
+        return try {
+            auth.signUpWith(Email) {
+                this.email = email.lowercase()
+                this.password = password
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Sign up error", e)
+            false
+        }
+    }
+
+    /**
+     * Enhanced Sign In:
+     * 1. Authenticates the user.
+     * 2. Checks if a profile exists in 'user_profiles'.
+     * 3. If not, creates it (First time login flow).
+     */
+    suspend fun signInAndSyncProfile(email: String, password: String, countryId: Int): Boolean {
+        return try {
+            // Step 1: Attempt Login
+            auth.signInWith(Email) {
+                this.email = email.lowercase()
+                this.password = password
+            }
+
+            bookmarksDao.deleteAll()
+
+            // Step 2: Get the authenticated UID
+            val user = auth.currentUserOrNull() ?: return false
+            val uid = user.id
+
+            // Step 3: Check if profile exists
+            val response = client.from("user_profiles")
+                .select { filter { eq("user_auth_id", uid) } }
+
+            val profileList = response.decodeList<UserProfile>()
+
+            if (profileList.isEmpty()) {
+                // Step 4: Profile doesn't exist -> Create it now
+                // The user is already authenticated, so RLS will allow this insert
+                val newProfile = UserProfile(
+                    user_auth_id = uid,
+                    user_auth_email = email.lowercase(),
+                    country_id = if (countryId != 0) countryId else 183 // Default if missing
+                )
+                client.from("user_profiles").insert(newProfile)
+                Log.d(TAG, "First login detected. Profile created for $uid")
+            }
+
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "SignIn and Sync error: ${e.message}")
+            false
+        }
+    }
+
+    fun isUserLoggedIn(): Boolean {
+        return auth.currentSessionOrNull() != null
+    }
+
+    suspend fun deleteAccount() {
+        client.functions.invoke("deleteUser")
+    }
+
+    // ============================================
+    // FETCH FUNCTIONS (EXISTING CODE - NO CHANGES)
+    // ============================================
+
+    // In Repository.kt
+
+// In Repository.kt
+
+    suspend fun getNewsItems(
+        pageSize: Int = 20,
+        startRow: Int = 0,
+        categoryFilter: Category? = null,
+        countryIdsFilter: Set<Int>? = null, // ✅ New parameter
+        scopeFilter: String? = null          // ✅ New parameter
+    ): List<NewsItem> {
+        val userCountryId = 183 // Example: United States. You might want to get this from a user profile later.
+
+        val response = client.postgrest["news_items"].select {
+            filter {
+                categoryFilter?.let { eq("category_id", it.category_id) }
+
+                when {
+                    !countryIdsFilter.isNullOrEmpty() -> isIn("country_id", countryIdsFilter.toList())
+                    scopeFilter == "Local" -> eq("country_id", userCountryId)
+                    scopeFilter == "International" -> neq("country_id", userCountryId)
+                }
+            }
+
+            // Your existing order and range logic
+            order("publication_date", order = Order.DESCENDING)
+            range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+        }
+
+        val networkNews = response.decodeList<NewsItem>()
+
+        Log.d(TAG, "✅ === Received ${networkNews.size} items from Supabase (paginated) ===")
+        networkNews.forEachIndexed { index, item ->
+            Log.d(TAG, "Supabase Item #${index + 1}: $item")
+        }
+
+        return networkNews
+    }
+
+    suspend fun cacheNewsItems(newsItems: List<NewsItem>){
+
+        Log.d(TAG, "==========================================================")
+
+        val entities = newsItems.map { it.toEntity() }
+        // ======================= Log Room Data Here =======================
+        Log.d(TAG, "💾 === Caching ${entities.size} items into Room DB ===")
+        entities.forEachIndexed { index, entity ->
+            Log.d(TAG, "Room Entity #${index + 1}: $entity")
+        }
+        Log.d(TAG, "==========================================================")
+        // ====================================================================
+
+        newsItemDao.insertAllNewsItems(entities)
+
+        Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
+    }
+
+
+    suspend fun getRatingsForNewsItem(newsItemId: Int): List<RatingItem> {
+        return try {
+            val response = client.postgrest["rating_items"].select {
+                filter {
+                    eq("news_item_id", newsItemId)
+                }
+            }
+            response.decodeList<RatingItem>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun getNewsItemById(newsItemId: Int): NewsItem {
+        return try {
+            val response = client.postgrest["news_items"].select {
+                filter {
+                    eq("news_item_id", newsItemId)
+                }
+            }
+            response.decodeSingle<NewsItem>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw Exception("Failed to load news item with id: $newsItemId")
+        }
+    }
+// Add Comments function with connectivity resistance
+    suspend fun addNewComments(
+        userProfileId: Int,
+        newsItemId: Int,
+        comment: String,
+        rating: Double,
+        completed: Boolean
+    ): Int {
+         if (networkMonitor.isConnected.value){
+             try {
+
+            val user = client.auth.currentUserOrNull()!!.id
+            val response = client
+                .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+            val profiles = response.decodeList<UserProfile>()
+
+            val profile = profiles.first()
+            val userProfileIdActual = profile.user_profile_id
+
+            val scaledValue = rating * 100
+            val truncatedValue = floor(scaledValue)
+            val ratingf = truncatedValue / 100
+
+            val datos = RatingItem(
+                newsItemId,
+                userProfileIdActual,
+                ratingf,
+                comment,
+                true
+            )
+
+            val answer = client.from("rating_items").insert(listOf(datos)) {}
+                 updateReliabilityScore(newsItemId,rating)
+             return 0
+            } catch (e: Exception) {
+
+                 Log.w(TAG,"Error en la espera")
+            e.printStackTrace()
+             return 1  }
+
+         }else{
+         daocomment.insert(PendingComment(newsItemId = newsItemId, userProfileId = "", commentText = comment, reliabilityScore = rating))
+             Log.w(TAG,"Se activo el encolamiento")
+             return 2
+
+        }
+    }
+    // Function that uploads the comments that have been uploaded without internet connection
+    suspend fun syncPendingComments(): Int  {
+
+    try {
+        Log.w(TAG,"sincronizando")
+
+        val user = client.auth.currentUserOrNull()!!.id
+        val response = client
+            .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+        val profiles = response.decodeList<UserProfile>()
+
+        val profile = profiles.first()
+        val userProfileIdActual = profile.user_profile_id
+
+
+
+
+        val pending = daocomment.getAll()
+// Assuming you create this DAO function
+        if (pending.isEmpty()) {
+            Log.d(TAG, "No pending comments to sync.")
+            return 1 // Nothing to sync
+        }
+
+
+        for (comment in pending) {
+            try {
+
+                val scaledValue = comment.reliabilityScore * 100
+                val truncatedValue = floor(scaledValue)
+                val ratingf = truncatedValue / 100
+                val newsItemId = comment.newsItemId
+
+                val datos = RatingItem(
+                    newsItemId,
+                    userProfileIdActual,
+                    ratingf,
+                    comment.commentText,
+                    true
+                )
+
+                val answer = client.from("rating_items").insert(listOf(datos)) {}
+
+                val newsItem = getNewsItemById(newsItemId)
+                val totalRatings = newsItem.total_ratings
+                val averagereliabilityscore = newsItem.average_reliability_score
+                val newtotalRatings = totalRatings + 1
+                val newAverage = (totalRatings*averagereliabilityscore + ratingf)/newtotalRatings
+                val scaledValue1 = newAverage * 100
+                val truncatedValue1 = floor(scaledValue1)
+                val newAveragerounded = truncatedValue1 / 100
+                val response = client.from("news_items")
+                    .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
+                    {filter { eq("news_item_id",newsItemId) }}
+
+
+
+
+
+                daocomment.delete(comment)
+
+            } catch (_: Exception) {
+                // Si falla, sigue pendiente
+                daocomment.delete(comment)
+                return 0
+            }
+        }
+
+
+
+    } catch (_: Exception) {
+        return 2
+
+    }
+     return 1
+
+    }
+
+    //========================================================
+    // Add News Function with connectivity resistance
+    //========================================================
+
+    suspend fun addNews(url: String, category_id: Int,country: Int): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+                val articleMetadata = extractArticleMetadata(url)
+                val imageUrl = articleMetadata.imageUrl
+                val title = articleMetadata.title
+                val description = articleMetadata.description
+                val author_type = articleMetadata.author
+                val author_institution = articleMetadata.institution
+
+
+
+
+                val datos = NewsItem(
+                    userProfileIdActual,
+                    title = title,
+                    short_description = description,
+                    long_description = description,
+                    image_url = imageUrl,
+                    original_source_url = url,
+                    category_id = category_id,
+                    country_id = country,
+                    author_type = author_type,
+                    author_institution = author_institution,
+                    average_reliability_score = 0.0,
+                    total_ratings = 0,
+                    days_since = 0,
+                    is_fake = false,
+                    is_verifiedData = false,
+                    is_verifiedSource = false,
+
+
+
+
+
+
+
+
+
+                )
+
+                val answer = client.from("news_items").insert(listOf(datos)) {}
+
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            daonewsitem.insertNewsItem(NewsItemEntity(user_profile_id = "", title = "", short_description = "", image_url = "", category_id = category_id, country_id = country, author_type = "", author_institution = "", average_reliability_score = 0.0, total_ratings = 0, days_since = 0, news_item_id = 0, cachedTimestamp = System.currentTimeMillis(), is_fake = false, is_verifiedData = false, is_verifiedSource = false, is_recognizedAuthor = false, is_manipulated = false, long_description = "", original_source_url = url, publication_date = "", added_to_appDate = ""))
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun syncPendingNews():Int {
+
+        if (!networkMonitor.isConnected.value) {
+            Log.d(TAG, "Cannot sync pending news, no internet connection.")
+            return 2 // No connection
+        }
+
+        try {
+            Log.d(TAG, "Syncing pending news...")
+
+            // 1. Get the current user's profile to assign ownership
+            val user = client.auth.currentUserOrNull()?.id ?: return 2 // Not logged in
+            val profileResponse = client.from("user_profiles").select { filter { eq("user_auth_id", user) } }
+            val profile = profileResponse.decodeList<UserProfile>().firstOrNull() ?: return 2 // Profile not found
+
+            // 2. Get all pending news items from the local database
+            val pendingNews = daonewsitem.getAllPendingNews() // Assuming you create this DAO function
+            if (pendingNews.isEmpty()) {
+                Log.d(TAG, "No pending news to sync.")
+                return 1 // Nothing to sync
+            }
+
+            Log.d(TAG, "Found ${pendingNews.size} pending news items to upload.")
+
+            // 3. Iterate through each pending item and upload it
+            for (pendingItem in pendingNews) {
+                try {
+                    // Fetch the image URL online, as it wasn't available offline
+                    val articleMetadata = extractArticleMetadata(pendingItem.original_source_url)
+                    val imageUrl = articleMetadata.imageUrl
+                    val title = articleMetadata.title
+                    val description = articleMetadata.description
+                    val author_type = articleMetadata.author
+                    val author_institution = articleMetadata.institution
+
+                    // Create a NewsItem object for Supabase, mapping fields from NewsItemEntity
+                    val newsItemToUpload = NewsItem(
+                        title = title,
+                        short_description = description, // Assuming long_description holds the full text
+                        long_description = description,
+                        image_url = imageUrl,
+                        original_source_url = pendingItem.original_source_url,
+                        category_id = pendingItem.category_id,
+                        author_type = author_type,
+                        author_institution = author_institution,
+                        user_profile_id = profile.user_profile_id,
+                        total_ratings = 0, // Starts with no ratings
+                        average_reliability_score = 0.0 // Starts with no score
+                    )
+
+                    // Insert the item into the remote 'news_items' table
+                    client.from("news_items").insert(newsItemToUpload)
+
+                    // 4. If upload is successful, delete the pending item from the local DB
+                    daonewsitem.delete(pendingItem)
+                    Log.d(TAG, "Successfully synced and deleted pending news item: ${pendingItem.title}")
+
+                } catch (uploadError: Exception) {
+                    Log.e(TAG, "Failed to sync pending news item: ${pendingItem.title}", uploadError)
+                    // If a single item fails, we can choose to continue with the next one
+                    // or stop. Continuing is generally better for robustness.
+                }
+            }
+            // After syncing, clear the main news cache to ensure data is fresh on next load
+            clearCache()
+            return 1 // Sync process completed
+
+        } catch (e: Exception) {
+            Log.e(TAG, "An error occurred during the news sync process", e)
+            return 0 // General failure
+        }
+    }
+
+
+
+
+   //===================================================
+    // Function to update average reliability score
+    //===============================================
+    suspend fun updateReliabilityScore(NewsItemId: Int, rating: Double): Any {
+        return try {
+            val newsItem = getNewsItemById(NewsItemId)
+            val totalRatings = newsItem.total_ratings
+            val averagereliabilityscore = newsItem.average_reliability_score
+            val newtotalRatings = totalRatings + 1
+            val newAverage = (totalRatings*averagereliabilityscore + rating)/newtotalRatings
+            val scaledValue = newAverage * 100
+            val truncatedValue = floor(scaledValue)
+            val newAveragerounded = truncatedValue / 100
+            val response = client.from("news_items")
+                .update({set("total_ratings", newtotalRatings);set("average_reliability_score", newAveragerounded)})
+                {filter { eq("news_item_id",NewsItemId) }}
+            Log.d(TAG, "Successfully updated reliability score for news item: $NewsItemId")
+
+            newsItemDao.updateReliabilityScore(NewsItemId, newAveragerounded)
+
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // ============================================
+    // NEW: CACHE-FIRST FUNCTIONS FOR NEWS FEED
+    // ============================================
+
+    fun getNewsFeedCached(): Flow<List<NewsItem>> {
+        return newsItemDao.getAllNewsItems().map { cachedEntities ->
+            cachedEntities.map { it.toNewsItem() }
+        }
+    }
+
+    suspend fun loadNewsFeedCached(
+        forceRefresh: Boolean = false,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ) = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "loadNewsFeedCached - forceRefresh: $forceRefresh")
+
+            if (!forceRefresh && shouldUseCachedData()) {
+                Log.d(TAG, "Using cached data (cache is fresh)")
+                return@withContext
+            }
+
+            Log.d(TAG, "Fetching fresh data from Supabase...")
+
+            val freshNewsItems = getNewsItems(pageSize, startRow)
+
+            if (freshNewsItems.isEmpty()) {
+                Log.w(TAG, "No data received from Supabase")
+                return@withContext
+            }
+
+            if (forceRefresh) {
+                newsItemDao.deleteAllNewsItems()
+                Log.d(TAG, "Cache cleared due to force refresh")
+
+                // Limpiar search cache
+                clearSearchCache()
+                Log.d(TAG, "🧹 Search cache cleared")
+            }
+            val entities = freshNewsItems.map { it.toEntity() }
+
+            newsItemDao.insertAllNewsItems(entities)
+
+            Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news feed", e)
+        }
+    }
+
+    suspend fun getNewsItemByIdCached(newsItemId: Int): NewsItem? = withContext(Dispatchers.IO) {
+        try {
+            val cachedItem = newsItemDao.getNewsItemById(newsItemId)
+            if (cachedItem != null) {
+                Log.d(TAG, "News item $newsItemId found in cache")
+                return@withContext cachedItem.toNewsItem()
+            }
+
+            Log.d(TAG, "News item $newsItemId not in cache, fetching from Supabase...")
+            val item = getNewsItemById(newsItemId)
+
+            newsItemDao.insertNewsItem(item.toEntity())
+
+            item
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting news item $newsItemId", e)
+            null
+        }
+    }
+
+    private suspend fun shouldUseCachedData(): Boolean {
+        val hasCachedData = newsItemDao.hasCachedData()
+        if (!hasCachedData) {
+            Log.d(TAG, "No cached data available")
+            return false
+        }
+
+        val cachedItems = newsItemDao.getAllNewsItemsList()
+        if (cachedItems.isEmpty()) {
+            return false
+        }
+
+        val newestItem = cachedItems.minByOrNull { it.cachedTimestamp }
+        val currentTime = System.currentTimeMillis()
+        val cacheAge = currentTime - (newestItem?.cachedTimestamp ?: 0)
+
+        val isFresh = cacheAge < CACHE_EXPIRATION_TIME
+
+        Log.d(TAG, "Cache age: ${cacheAge / 1000}s, Fresh: $isFresh")
+
+        return isFresh
+    }
+
+    suspend fun getCachedItemsCount(): Int = withContext(Dispatchers.IO) {
+        newsItemDao.getCachedItemsCount()
+    }
+
+    suspend fun clearCache() = withContext(Dispatchers.IO) {
+        newsItemDao.deleteAllNewsItems()
+        bookmarksDao.deleteAll()
+        daocomment.deleteAll()
+        Log.d(TAG, "Cache cleared manually")
+    }
+
+    suspend fun deleteExpiredCache() = withContext(Dispatchers.IO) {
+        val expirationTimestamp = System.currentTimeMillis() - CACHE_EXPIRATION_TIME
+        newsItemDao.deleteOldCachedItems(expirationTimestamp)
+        Log.d(TAG, "Expired cache items deleted")
+    }
+
+    /**
+     * Search news items in cache by query
+     * Searches in both title and short_description fields
+     * Returns Flow for reactive updates
+     *
+     * @param searchQuery The text to search for (case-insensitive)
+     * @return Flow of matching NewsItems, or all items if query is blank
+     */
+    /**
+     * Search news items in cache by query with LRU caching
+     *
+     * Strategy:
+     * 1. Check if query is in LRU cache (instant return)
+     * 2. If cache miss, query Room database
+     * 3. Store result in LRU cache for future use
+     *
+     * @param searchQuery The text to search for (case-insensitive)
+     * @return Flow of matching NewsItems, or all items if query is blank
+     */
+    fun searchNewsItemsCached(searchQuery: String): Flow<List<NewsItem>> {
+        return if (searchQuery.isBlank()) {
+            // Empty query → return all news
+            newsItemDao.getAllNewsItems().map { cachedEntities ->
+                cachedEntities.map { it.toNewsItem() }
+            }
+        } else {
+            // Check LRU cache first
+            val cachedIds = searchQueryCache.get(searchQuery)
+
+            if (cachedIds != null) {
+                // CACHE HIT - Return cached results instantly
+                Log.d(TAG, "Query cache HIT: returning ${cachedIds.size} cached results for '$searchQuery'")
+
+                // Convert IDs to NewsItems from Room
+                newsItemDao.getAllNewsItems().map { allItems ->
+                    allItems
+                        .filter { it.news_item_id in cachedIds }
+                        .map { it.toNewsItem() }
+                }
+            } else {
+                // CACHE MISS - Query Room and cache result
+                Log.d(TAG, "Query cache MISS: searching Room for '$searchQuery'")
+
+                newsItemDao.searchNewsItems(searchQuery).map { results ->
+                    // Store result in cache
+                    val newsItemIds = results.map { it.news_item_id }
+                    searchQueryCache.put(searchQuery, newsItemIds)
+
+                    Log.d(TAG, "Cached search result: '$searchQuery' → ${newsItemIds.size} items")
+
+                    // Return NewsItems
+                    results.map { it.toNewsItem() }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear search query cache
+     * Useful when news data is refreshed
+     */
+    fun clearSearchCache() {
+        searchQueryCache.clear()
+        Log.d(TAG, "🧹 Search query cache cleared")
+    }
+
+    /**
+     * Get search cache statistics
+     */
+    fun getSearchCacheStats(): SearchQueryCache.CacheStats {
+        return searchQueryCache.getStats()
+    }
+
+    /**
+     * Remove expired search queries from cache
+     * Called periodically to clean up old entries
+     */
+    suspend fun cleanExpiredSearchCache() = withContext(Dispatchers.IO) {
+        searchQueryCache.removeExpired()
+    }
+
+// ============================================
+// BUSINESS QUESTION #4: RATING DISTRIBUTION (SUPABASE REAL)
+// ============================================
+
+    suspend fun getRatingDistributionByCategory(): Result<RatingDistributionData> {
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "Fetching real rating distribution from Supabase...")
+
+                // 1. Obtener todas las categorías
+                val categories = getCategories(forcedrefresh = false)
+                if (categories.isEmpty()) {
+                    Log.w(TAG, "No categories found in database")
+                    return@withContext Result.failure(Exception("No categories found"))
+                }
+
+                // 2. Para cada categoría, calcular su distribución
+                val distributions = mutableListOf<CategoryRatingDistribution>()
+
+                for (category in categories) {
+                    val distribution = calculateCategoryDistribution(category)
+                    if (distribution != null) {
+                        distributions.add(distribution)
+                        Log.d(TAG, "Processed category: ${category.name} with ${distribution.ratingCount} ratings")
+                    }
+                }
+
+                if (distributions.isEmpty()) {
+                    Log.w(TAG, "No ratings found in database")
+                    return@withContext Result.failure(Exception("No ratings data available"))
+                }
+
+                // 3. Calcular estadísticas globales
+                val statistics = calculateGlobalStatistics(distributions)
+
+                val result = RatingDistributionData(distributions, statistics)
+                Log.d(TAG, "Rating distribution loaded successfully: ${distributions.size} categories, ${statistics.totalRatings} total ratings")
+
+                Result.success(result)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading rating distribution from Supabase", e)
+                Result.failure(e)
+            }
+        }
+    }
+
+    /**
+     * Calcula la distribución de ratings para una categoría específica
+     */
+    private suspend fun calculateCategoryDistribution(category: Category): CategoryRatingDistribution? {
+        return try {
+            // 1. Obtener todas las noticias de esta categoría
+            val newsItems = client.postgrest["news_items"].select {
+                filter {
+                    eq("category_id", category.category_id)
+                }
+            }.decodeList<NewsItem>()
+
+            if (newsItems.isEmpty()) {
+                Log.d(TAG, "No news items found for category: ${category.name}")
+                return null
+            }
+
+            // 2. Obtener todos los ratings de estas noticias
+            val newsItemIds = newsItems.map { it.news_item_id }
+            val allRatings = mutableListOf<RatingItem>()
+
+            // Supabase tiene límite en queries IN, así que hacemos por lotes si es necesario
+            newsItemIds.chunked(100).forEach { batch ->
+                val ratings = client.postgrest["rating_items"].select {
+                    filter {
+                        isIn("news_item_id", batch)
+                    }
+                }.decodeList<RatingItem>()
+                allRatings.addAll(ratings)
+            }
+
+            if (allRatings.isEmpty()) {
+                Log.d(TAG, "No ratings found for category: ${category.name}")
+                return null
+            }
+
+            // 3. Calcular estadísticas
+            val avgReliability = allRatings.map { it.assigned_reliability_score }.average()
+            val ratingCount = allRatings.size
+
+            // 4. Calcular distribución por rangos
+            val range0_20 = allRatings.count { it.assigned_reliability_score <= 0.20 }
+            val range21_40 = allRatings.count { it.assigned_reliability_score in 0.21..0.40 }
+            val range41_60 = allRatings.count { it.assigned_reliability_score in 0.41..0.60 }
+            val range61_80 = allRatings.count { it.assigned_reliability_score in 0.61..0.80 }
+            val range81_100 = allRatings.count { it.assigned_reliability_score in 0.81..1.0 }
+
+            CategoryRatingDistribution(
+                categoryId = category.category_id,
+                category = category.name,
+                avgReliabilityScore = avgReliability,
+                ratingCount = ratingCount,
+                range0_20 = range0_20,
+                range21_40 = range21_40,
+                range41_60 = range41_60,
+                range61_80 = range61_80,
+                range81_100 = range81_100
+            )
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating distribution for category: ${category.name}", e)
+            null
+        }
+    }
+
+    /**
+     * Calcula estadísticas globales a partir de las distribuciones por categoría
+     */
+    private fun calculateGlobalStatistics(distributions: List<CategoryRatingDistribution>): RatingStatistics {
+        val totalRatings = distributions.sumOf { it.ratingCount }
+        val avgReliability = if (distributions.isNotEmpty()) {
+            // Promedio ponderado por número de ratings
+            val weightedSum = distributions.sumOf { it.avgReliabilityScore * it.ratingCount }
+            weightedSum / totalRatings
+        } else {
+            0.0
+        }
+
+        val mostRatedCategory = distributions.maxByOrNull { it.ratingCount }?.category ?: "N/A"
+        val mostReliableCategory = distributions.maxByOrNull { it.avgReliabilityScore }?.category ?: "N/A"
+        val leastReliableCategory = distributions.minByOrNull { it.avgReliabilityScore }?.category ?: "N/A"
+
+        return RatingStatistics(
+            totalRatings = totalRatings,
+            avgReliability = avgReliability,
+            mostRatedCategory = mostRatedCategory,
+            mostReliableCategory = mostReliableCategory,
+            leastReliableCategory = leastReliableCategory
+        )
+    }
+    // ============================================
+// CATEGORY FILTERING FUNCTIONS
+// ============================================
+
+    /**
+     * Fetch all categories from Supabase
+     */
+    suspend fun getCategories(forcedrefresh: Boolean): List<Category> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                categoryDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+            // First, try to get categories from the local cache
+            val cachedCategories = categoryDao.getAllCategories()
+            if (cachedCategories.isNotEmpty()) {
+                Log.d(TAG, "Categories loaded from cache: ${cachedCategories.size}")
+                return@withContext cachedCategories
+            }
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching categories from Supabase...")
+            val response = client.postgrest["categories"].select()
+            val categories = response.decodeList<Category>()
+
+            // Save the fetched categories into the cache
+            if (categories.isNotEmpty()) {
+                categoryDao.insertAll(categories)
+                Log.d(TAG, "Categories loaded from Supabase and cached: ${categories.size}")
+            } else {
+                Log.d(TAG, "No categories found on Supabase.")
+            }
+
+            categories
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading categories, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                categoryDao.getAllCategories()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading categories from cache as fallback", dbError)
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Fetch news items filtered by category
+     */
+    suspend fun getNewsItemsByCategory(
+        categoryId: Int,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ): List<NewsItem> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Fetching news items for category: $categoryId")
+            val response = client.postgrest["news_items"].select {
+                filter {
+                    eq("category_id", categoryId)
+                }
+                range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+            }
+            val items = response.decodeList<NewsItem>()
+            Log.d(TAG, "News items loaded for category $categoryId: ${items.size}")
+            items
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news items for category $categoryId", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Load news feed with optional category filter (cached version)
+     */
+    suspend fun loadNewsFeedWithFilter(
+        categoryId: Int? = null,
+        countryIdsFilter: Set<Int> = emptySet(),
+        scopeFilter: String = "All",
+        forceRefresh: Boolean = false,
+        pageSize: Int = 20,
+        startRow: Int = 0
+    ) = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "loadNewsFeedWithFilter - categoryId: $categoryId, countryIds: $countryIdsFilter, scope: $scopeFilter, forceRefresh: $forceRefresh")
+
+            if (!forceRefresh && shouldUseCachedData()) {
+                Log.d(TAG, "Using cached data (cache is fresh)")
+                return@withContext
+            }
+
+            Log.d(TAG, "Fetching fresh data from Supabase...")
+
+            val freshNewsItems = getNewsItems(
+                pageSize = pageSize,
+                startRow = startRow,
+                categoryFilter = categoryId?.let { Category(category_id = it) },
+                countryIdsFilter = countryIdsFilter,
+                scopeFilter = scopeFilter
+            )
+
+            if (freshNewsItems.isEmpty()) {
+                Log.w(TAG, "No data received from Supabase")
+                return@withContext
+            }
+
+            if (forceRefresh) {
+                newsItemDao.deleteAllNewsItems()
+                Log.d(TAG, "Cache cleared due to force refresh")
+
+                // Limpiar search cache para que las búsquedas se re-ejecuten con datos frescos
+                clearSearchCache()
+                Log.d(TAG, "🧹 Search cache cleared - queries will re-execute with fresh data")
+            }
+
+            val entities = freshNewsItems.map { it.toEntity() }
+            // ======================= Log Room Data Here =======================
+            Log.d(TAG, "💾 === Caching ${entities.size} items into Room DB ===")
+            entities.forEachIndexed { index, entity ->
+                Log.d(TAG, "Room Entity #${index + 1}: $entity")
+            }
+            Log.d(TAG, "==========================================================")
+            // ====================================================================
+
+            newsItemDao.insertAllNewsItems(entities)
+
+            Log.d(TAG, "Successfully cached ${entities.size} news items from Supabase")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading news feed with filter", e)
+        }
+}
+    // COUNTRIES FUNCTIONS//
+
+    suspend fun getCountries(forcedrefresh: Boolean): List<Country> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                countryDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+            // First, try to get categories from the local cache
+            val cachedCountries = countryDao.getAllCountries()
+            if (cachedCountries.isNotEmpty()) {
+                Log.d(TAG, "Countries loaded from cache: ${cachedCountries.size}")
+                return@withContext cachedCountries
+            }
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["Countries"].select()
+            val countries = response.decodeList<Country>()
+
+            // Save the fetched categories into the cache
+            if (countries.isNotEmpty()) {
+                countryDao.insertAll(countries)
+                Log.d(TAG, "Countries loaded from Supabase and cached: ${countries.size}")
+            } else {
+                Log.d(TAG, "No countries found on Supabase.")
+            }
+
+            countries
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading categories, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                countryDao.getAllCountries()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading categories from cache as fallback", dbError)
+                emptyList()
+            }
+        }
+    }
+
+
+suspend fun extractImageUrlFromArticle(url: String): String? {
+    return withContext(Dispatchers.IO) { // Perform network operation on the IO thread
+        try {
+            // 1. Fetch and parse the HTML document
+            val doc = safeJsoupConnect(url).get()
+
+            // 2. Look for the 'og:image' meta tag (most reliable)
+            val ogImage = doc.select("meta[property=og:image]").attr("content")
+            if (ogImage.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via og:image: $ogImage")
+                return@withContext ogImage
+            }
+
+            // 3. Look for the 'twitter:image' meta tag
+            val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
+            if (twitterImage.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via twitter:image: $twitterImage")
+                return@withContext twitterImage
+            }
+
+            // 4. Look for the 'image_src' link tag
+            val imageSrc = doc.select("link[rel=image_src]").attr("href")
+            if (imageSrc.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via image_src: $imageSrc")
+                return@withContext imageSrc
+            }
+
+            // 5. Fallback: Find the first large image inside the <article> or <main> tag
+            val mainContent = doc.select("article, main").first()
+            val firstImage = mainContent?.select("img[src]")?.firstOrNull()?.attr("abs:src")
+            if (firstImage != null && firstImage.isNotEmpty()) {
+                Log.d("ImageExtractor", "Found image via fallback (first img in article): $firstImage")
+                return@withContext firstImage
+            }
+
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
+
+        } catch (e: IOException) {
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
+        } catch (e: Exception) {
+            // ✅ FIX: Instead of null, return a placeholder image link
+            Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+            return@withContext "https://via.placeholder.com/600x400.png?text=No+Image+Available"
+
+        }
+    }
+}
+
+
+suspend fun extractTitle(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = safeJsoupConnect(url).get()
+
+
+
+            // 1. Try Open Graph title
+            val ogTitle = doc.select("meta[property=og:title]").attr("content")
+            if (ogTitle.isNotBlank()) return@withContext ogTitle
+
+            // 2. Try Twitter title
+            val twitterTitle = doc.select("meta[name=twitter:title]").attr("content")
+            if (twitterTitle.isNotBlank()) return@withContext twitterTitle
+
+            // 3. Fallback to standard <title> tag
+            val docTitle = doc.title()
+            if (docTitle.isNotBlank()) return@withContext docTitle
+
+            null
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting title from $url", e)
+            null
+        }
+    }
+}
+
+suspend fun extractAuthor(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = safeJsoupConnect(url).get()
+
+
+
+            // 1. Try standard author meta tags
+            val author = doc.select("meta[name=author]").attr("content")
+            if (author.isNotBlank()) return@withContext author
+
+            // 2. Try Open Graph article author
+            val ogAuthor = doc.select("meta[property=article:author]").attr("content")
+            if (ogAuthor.isNotBlank()) return@withContext ogAuthor
+
+            // 3. Common HTML patterns (e.g., classes named "author" or "byline")
+            val htmlAuthor = doc.select("[class*=author], [id*=author], [class*=byline]").first()?.text()
+            if (htmlAuthor != null && htmlAuthor.isNotBlank()) return@withContext htmlAuthor
+
+            return@withContext "Anonimo"
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting author from $url", e)
+            return@withContext "Anonimo"
+        }
+    }
+}
+
+suspend fun extractDescription(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = safeJsoupConnect(url).get()
+
+
+            // 1. Try Open Graph description
+            val ogDesc = doc.select("meta[property=og:description]").attr("content")
+            if (ogDesc.isNotBlank()) return@withContext ogDesc
+
+            // 2. Try standard meta description
+            val metaDesc = doc.select("meta[name=description]").attr("content")
+            if (metaDesc.isNotBlank()) return@withContext metaDesc
+
+            // 3. Try Twitter description
+            val twitterDesc = doc.select("meta[name=twitter:description]").attr("content")
+            if (twitterDesc.isNotBlank()) return@withContext twitterDesc
+
+            // 4. Fallback: Get the first paragraph of the article body
+            val firstParagraph = doc.select("article p, main p, .content p").first()?.text()
+            if (firstParagraph != null && firstParagraph.isNotBlank()) {
+                return@withContext if (firstParagraph.length > 200) firstParagraph.take(197) + "..." else firstParagraph
+            }
+
+            return@withContext "Anonimo"
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting description from $url", e)
+            return@withContext "Anonimo"
+        }
+    }
+}
+
+suspend fun extractAuthorInstitution(url: String): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val doc = safeJsoupConnect(url).get()
+
+            // 1. Try Open Graph site name (Very common for news outlets)
+            val ogSiteName = doc.select("meta[property=og:site_name]").attr("content")
+            if (ogSiteName.isNotBlank()) return@withContext ogSiteName
+
+            // 2. Try the "publisher" meta tag
+            val publisher = doc.select("meta[name=publisher]").attr("content")
+            if (publisher.isNotBlank()) return@withContext publisher
+
+            // 3. Try article:publisher (often a link to a FB page, but can be text)
+            val articlePublisher = doc.select("meta[property=article:publisher]").attr("content")
+            if (articlePublisher.isNotBlank()) {
+                // If it's a URL, we return the site name part, otherwise the text
+                return@withContext articlePublisher.substringAfterLast("/").replace("-", " ")
+                    .capitalize()
+            }
+
+            // 4. Fallback: Search for common classes in the footer or header
+            val brandName = doc.select(".brand, .logo-text, [class*='source']").first()?.text()
+            if (brandName != null && brandName.isNotBlank()) return@withContext brandName
+
+            return@withContext "Anonimo"
+        } catch (e: Exception) {
+            Log.e("Error", "Error extracting institution from $url", e)
+            return@withContext "Anonimo"
+        }
+    }
+  }
+
+    private data class ArticleMetadata(
+        val imageUrl: String,
+        val title: String,
+        val description: String,
+        val author: String,
+        val institution: String
+    )
+
+    private suspend fun extractArticleMetadata(url: String): ArticleMetadata {
+        return withContext(Dispatchers.IO) {
+            try {
+                val doc = safeJsoupConnect(url).get()
+                Log.d(TAG, "Fetched article metadata from $url with HTTP ${doc.connection().response().statusCode()}")
+
+                ArticleMetadata(
+                    imageUrl = extractImageUrlFromDocument(doc, url),
+                    title = extractTitleFromDocument(doc) ?: "",
+                    description = extractDescriptionFromDocument(doc),
+                    author = extractAuthorFromDocument(doc),
+                    institution = extractInstitutionFromDocument(doc)
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error extracting article metadata from $url", e)
+                ArticleMetadata(
+                    imageUrl = PLACEHOLDER_IMAGE_URL,
+                    title = "",
+                    description = "Anonimo",
+                    author = "Anonimo",
+                    institution = "Anonimo"
+                )
+            }
+        }
+    }
+
+    private fun extractImageUrlFromDocument(doc: Document, url: String): String {
+        val ogImage = doc.select("meta[property=og:image]").attr("content")
+        if (ogImage.isNotBlank()) return resolveUrl(url, ogImage)
+
+        val twitterImage = doc.select("meta[name=twitter:image]").attr("content")
+        if (twitterImage.isNotBlank()) return resolveUrl(url, twitterImage)
+
+        val imageSrc = doc.select("link[rel=image_src]").attr("href")
+        if (imageSrc.isNotBlank()) return resolveUrl(url, imageSrc)
+
+        val jsonLdImage = findJsonLdValue(doc, "image")
+        if (jsonLdImage.isNotBlank()) return resolveUrl(url, jsonLdImage)
+
+        val firstImage = doc.select("article img[src], main img[src]").first()?.attr("abs:src")
+        if (!firstImage.isNullOrBlank()) return firstImage
+
+        Log.w("ImageExtractor", "Could not find a main image for URL: $url. Using placeholder.")
+        return PLACEHOLDER_IMAGE_URL
+    }
+
+    private fun extractTitleFromDocument(doc: Document): String? {
+        val ogTitle = doc.select("meta[property=og:title]").attr("content")
+        if (ogTitle.isNotBlank()) return ogTitle
+
+        val twitterTitle = doc.select("meta[name=twitter:title]").attr("content")
+        if (twitterTitle.isNotBlank()) return twitterTitle
+
+        val jsonLdTitle = findJsonLdValue(doc, "headline", "name")
+        if (jsonLdTitle.isNotBlank()) return jsonLdTitle
+
+        val docTitle = doc.title()
+        if (docTitle.isNotBlank()) return docTitle
+
+        return null
+    }
+
+    private fun extractAuthorFromDocument(doc: Document): String {
+        val author = doc.select("meta[name=author], meta[name=parsely-author]").attr("content")
+        if (author.isNotBlank()) return author
+
+        val ogAuthor = doc.select("meta[property=article:author]").attr("content")
+        if (ogAuthor.isNotBlank()) return ogAuthor
+
+        val jsonLdAuthor = findJsonLdValue(doc, "author")
+        if (jsonLdAuthor.isNotBlank()) return jsonLdAuthor
+
+        val htmlAuthor = doc.select("[class*=author], [id*=author], [class*=byline]").first()?.text()
+        if (!htmlAuthor.isNullOrBlank()) return htmlAuthor
+
+        return "Anonimo"
+    }
+
+    private fun extractDescriptionFromDocument(doc: Document): String {
+        val ogDesc = doc.select("meta[property=og:description]").attr("content")
+        if (ogDesc.isNotBlank()) return ogDesc
+
+        val metaDesc = doc.select("meta[name=description]").attr("content")
+        if (metaDesc.isNotBlank()) return metaDesc
+
+        val twitterDesc = doc.select("meta[name=twitter:description]").attr("content")
+        if (twitterDesc.isNotBlank()) return twitterDesc
+
+        val jsonLdDescription = findJsonLdValue(doc, "description")
+        if (jsonLdDescription.isNotBlank()) return jsonLdDescription
+
+        val firstParagraph = doc.select("article p, main p, .content p").first()?.text()
+        if (!firstParagraph.isNullOrBlank()) {
+            return if (firstParagraph.length > 200) firstParagraph.take(197) + "..." else firstParagraph
+        }
+
+        return "Anonimo"
+    }
+
+    private fun extractInstitutionFromDocument(doc: Document): String {
+        val ogSiteName = doc.select("meta[property=og:site_name]").attr("content")
+        if (ogSiteName.isNotBlank()) return ogSiteName
+
+        val publisher = doc.select("meta[name=publisher]").attr("content")
+        if (publisher.isNotBlank()) return publisher
+
+        val jsonLdPublisher = findJsonLdValue(doc, "publisher")
+        if (jsonLdPublisher.isNotBlank()) return jsonLdPublisher
+
+        val articlePublisher = doc.select("meta[property=article:publisher]").attr("content")
+        if (articlePublisher.isNotBlank()) {
+            return articlePublisher.substringAfterLast("/").replace("-", " ").capitalize()
+        }
+
+        val brandName = doc.select(".brand, .logo-text, [class*='source']").first()?.text()
+        if (!brandName.isNullOrBlank()) return brandName
+
+        return "Anonimo"
+    }
+
+    private fun findJsonLdValue(doc: Document, vararg keys: String): String {
+        doc.select("script[type=application/ld+json]").forEach { script ->
+            val json = script.data()
+            keys.forEach { key ->
+                val value = findSimpleJsonLdValue(json, key)
+                if (value.isNotBlank()) return value
+            }
+        }
+        return ""
+    }
+
+    private fun findSimpleJsonLdValue(json: String, key: String): String {
+        val objectWithNameRegex = Regex(
+            """"$key"\s*:\s*\{[^}]*"name"\s*:\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        objectWithNameRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        val arrayObjectWithNameRegex = Regex(
+            """"$key"\s*:\s*\[[^\]]*\{[^}]*"name"\s*:\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        arrayObjectWithNameRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        val arrayStringRegex = Regex(
+            """"$key"\s*:\s*\[\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        arrayStringRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        val stringRegex = Regex(
+            """"$key"\s*:\s*"([^"]+)"""",
+            RegexOption.IGNORE_CASE
+        )
+        stringRegex.find(json)?.groupValues?.getOrNull(1)?.let { return it }
+
+        return ""
+    }
+
+    private fun resolveUrl(baseUrl: String, value: String): String {
+        return try {
+            URI(baseUrl).resolve(value).toString()
+        } catch (_: Exception) {
+            value
+        }
+    }
+
+    // In Repository.kt
+
+    // In Repository.kt
+
+    /**
+     * Enhanced Jsoup connection that rotates between browser profiles
+     * to bypass bot detection.
+     */
+    private fun safeJsoupConnect(url: String): org.jsoup.Connection {
+        // List of high-quality, modern browser signatures
+        val browserProfiles = listOf(
+            // Chrome on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            // Firefox on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+            // Safari on macOS
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
+            // Edge on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
+        )
+
+        // Randomize the entry point
+        val referers = listOf(
+            "https://www.google.com/",
+            "https://t.co/", // Twitter
+            "https://www.bing.com/",
+            "https://www.reddit.com/"
+        )
+
+        return Jsoup.connect(url)
+            .userAgent(browserProfiles.random())
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
+            .header("Accept-Language", "en-US,en;q=0.9,es-ES;q=0.8,es;q=0.7")
+            .header("Referer", referers.random())
+            .header("Sec-Fetch-Dest", "document")
+            .header("Sec-Fetch-Mode", "navigate")
+            .header("Sec-Fetch-Site", "cross-site")
+            .header("Upgrade-Insecure-Requests", "1")
+            .header("Cache-Control", "max-age=0")
+            .timeout(20000) // 20 seconds
+            .followRedirects(true)
+            .ignoreHttpErrors(true)
+            .ignoreContentType(true)
+    }
+    // =======================================================
+    // PQRS Functions
+    // =======================================================
+    suspend fun addPQRS(description: String, type_id: Int): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+                val datos = PQRS(
+                     description,
+                     type_id,
+                    userProfileIdActual,
+                    )
+
+                val answer = client.from("PQRS").insert(listOf(datos)) {}
+
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            daopqrs.insert(PQRS(user_id = "", description = description, type_id = type_id, ))
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun getPQRS_types(forcedrefresh: Boolean): List<PQRS_types> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                daotypespqrs.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+            // First, try to get categories from the local cache
+            val cachedPQRStypes = daotypespqrs.getAllPQRS_types()
+            if (cachedPQRStypes.isNotEmpty()) {
+                Log.d(TAG, "Countries loaded from cache: ${cachedPQRStypes.size}")
+                return@withContext cachedPQRStypes
+            }
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Countries from Supabase...")
+            val response = client.postgrest["PQRS_types"].select()
+            val pqrstypes = response.decodeList<PQRS_types>()
+
+            // Save the fetched categories into the cache
+            if (pqrstypes.isNotEmpty()) {
+                daotypespqrs.insertAll(pqrstypes)
+                Log.d(TAG, "PQRS types loaded from Supabase and cached: ${pqrstypes.size}")
+            } else {
+                Log.d(TAG, "No countries found on Supabase.")
+            }
+
+            pqrstypes
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading pqrs types, attempting to use cache", e)
+            // In case of a network error, still try to return from cache as a fallback
+            try {
+                daotypespqrs.getAllPQRS_types()
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Error reading pqrs types from cache as fallback", dbError)
+                emptyList()
+            }
+        }
+    }
+
+
+    suspend fun syncPendingPQRS():Int {
+
+        if (!networkMonitor.isConnected.value) {
+            Log.d(TAG, "Cannot sync pending PQRS, no internet connection.")
+            return 2 // No connection
+        }
+
+        try {
+            Log.d(TAG, "Syncing pending PQRS...")
+
+            // 1. Get the current user's profile to assign ownership
+            val user = client.auth.currentUserOrNull()?.id ?: return 2 // Not logged in
+            val profileResponse = client.from("user_profiles").select { filter { eq("user_auth_id", user) } }
+            val profile = profileResponse.decodeList<UserProfile>().firstOrNull() ?: return 2 // Profile not found
+
+            // 2. Get all pending news items from the local database
+            val pendingPQRS = daopqrs.getAllPendingPQRS() // Assuming you create this DAO function
+            if (pendingPQRS.isEmpty()) {
+                Log.d(TAG, "No pending news to sync.")
+                return 1 // Nothing to sync
+            }
+
+            Log.d(TAG, "Found ${pendingPQRS.size} pending news items to upload.")
+
+            // 3. Iterate through each pending item and upload it
+            for (pendingItem in pendingPQRS) {
+                try {
+                    // Fetch the image URL online, as it wasn't available offline
+
+                    // Create a NewsItem object for Supabase, mapping fields from NewsItemEntity
+                    val PQRSToUpload = PQRS(pendingItem.description,pendingItem.type_id, profile.user_profile_id
+                    )
+
+                    // Insert the item into the remote 'news_items' table
+                    client.from("PQRS").insert(PQRSToUpload)
+
+                    // 4. If upload is successful, delete the pending item from the local DB
+                    daopqrs.delete(pendingItem)
+                    Log.d(TAG, "Successfully synced and deleted pending news item: ${pendingItem.type_id}")
+
+                } catch (uploadError: Exception) {
+                    Log.e(TAG, "Failed to sync pending news item: ${pendingItem.type_id}", uploadError)
+                    // If a single item fails, we can choose to continue with the next one
+                    // or stop. Continuing is generally better for robustness.
+                }
+            }
+            // After syncing, clear the main news cache to ensure data is fresh on next load
+            clearCache()
+            return 1 // Sync process completed
+
+        } catch (e: Exception) {
+            Log.e(TAG, "An error occurred during the news sync process", e)
+            return 0 // General failure
+        }
+    }
+
+    //========================================================
+    // Bookmark functions
+    //========================================================
+
+    suspend fun addBookmarks(user_id: String, news_item_id: Int,image_url: String,title: String,category_id: Int,short_description: String): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+                val datos = BookmarkEntity(
+                    newsItemId = news_item_id,
+                    imageUrl = image_url,
+                    title = title,
+                    categoryId = category_id,
+                    shortDescription = short_description,
+                    userid = userProfileIdActual,
+                )
+
+                val answer = client.from("bookmarks").insert(listOf(datos)) {}
+
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            bookmarksDao.insertBookmark(BookmarkEntity(userid = "", shortDescription = short_description, newsItemId = news_item_id, imageUrl = image_url, title = title, categoryId = category_id ))
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun deleteBookmark(news_item_id: Int): Int{
+
+        if (networkMonitor.isConnected.value){
+            try {
+
+                val user = client.auth.currentUserOrNull()!!.id
+                val response = client
+                    .from("user_profiles").select() { filter { eq("user_auth_id", user) } }
+                val profiles = response.decodeList<UserProfile>()
+
+                val profile = profiles.first()
+                val userProfileIdActual = profile.user_profile_id
+
+
+
+                client.from("bookmarks").delete {
+                    filter {
+                        eq("userid", userProfileIdActual)
+                        eq("newsItemId", news_item_id)
+                    }
+                }
+
+                bookmarksDao.deleteBookmarkById(news_item_id)
+                return 0
+            } catch (e: Exception) {
+
+                Log.w(TAG,"Error en la espera")
+                e.printStackTrace()
+                return 1  }
+
+        }else{
+            bookmarksDao.deleteBookmarkById(news_item_id)
+            Log.w(TAG,"Se activo el encolamiento")
+            return 2
+
+        }
+
+
+    }
+
+    suspend fun getBookmarks(forcedrefresh: Boolean
+                             ,pageSize: Int = 20,
+                             startRow: Int = 0,): List<BookmarkEntity> = withContext(Dispatchers.IO) {
+        try {
+            if (forcedrefresh){
+                bookmarksDao.deleteAll()
+                Log.d(TAG, "Cache cleared due to force refresh")
+            }
+
+            val userid: String? = getCurrentUserProfileId()
+
+            Log.d(TAG, "Current User ProfileID: $userid")
+
+
+            // If cache is empty, fetch from Supabase
+            Log.d(TAG, "Fetching Bookmarks from Supabase...")
+            val response = client.postgrest["bookmarks"].select(
+
+            ){  order("created_at", order = Order.DESCENDING)
+                range(startRow.toLong(), (startRow + pageSize - 1).toLong())
+                filter{
+                userid?.let { eq("userid", it)
+                }
+            }}
+            val bookmarks = response.decodeList<BookmarkEntity>()
+
+            // Save the fetched categories into the cache
+            if (bookmarks.isNotEmpty()) {
+                bookmarksDao.insertAll(bookmarks)
+                Log.d(TAG, "Bookmarks loaded from Supabase and cached: ${bookmarks.size}")
+            } else {
+                Log.d(TAG, "No Bookmarks found on Supabase.")
+            }
+
+            bookmarks
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading bookmarks, attempting to use cache", e)
+            emptyList()
+            // In case of a network error, still try to return from cache as a fallback
+        }
+    }
+
+
+    //========================================================
+    // User functions
+    //========================================================
+
+    suspend fun getCurrentUserProfileId(): String? {
+        return try {
+            val user = client.auth.currentUserOrNull()?.id
+            if (user == null) {
+                Log.w(TAG, "No authenticated user found")
+                return null
+            }
+
+            val response = client.from("user_profiles").select {
+                filter {
+                    eq("user_auth_id", user)
+                }
+            }
+            val profiles = response.decodeList<UserProfile>()
+
+            if (profiles.isEmpty()) {
+                Log.w(TAG, "No user profile found for auth_id: $user")
+                return null
+            }
+
+            val userProfileId = profiles.first().user_profile_id
+            Log.d(TAG, "Current user profile ID: $userProfileId")
+            userProfileId
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user profile ID", e)
+            null
+        }
+    }
+
+    //============================================================
+    // Reset Password Functions
+    // ===========================================================
+
+    // In Repository.kt
+
+    /**
+     * Sends a reset password email to the user.
+     */
+    // In Repository.kt
+
+    /**
+     * Sends a reset password email only if the user exists in our database.
+     * Returns: 0 for Success, 1 for "User not found", 2 for General Error
+     */
+    suspend fun sendResetPasswordEmail(email: String): Int {
+        return try {
+            // 1. First, check if the email exists in our user_profiles table
+            val response = client.from("user_profiles")
+                .select {
+                    filter {
+                        eq("user_auth_email", email.lowercase())
+                    }
+                }
+
+            val exists = response.decodeList<UserProfile>().isNotEmpty()
+
+            if (!exists) {
+                Log.w("Repository", "Reset attempt for non-existent email: $email")
+                return 1 // User not found
+            }
+
+            // 2. If user exists, trigger the Supabase Auth reset
+            auth.resetPasswordForEmail(email)
+            0 // Success
+        } catch (e: Exception) {
+            Log.e("Repository", "Error during reset process", e)
+            2 // General Error
+        }
+    }
+
+    // In Repository.kt
+
+    /**
+     * Verifies the 6-digit OTP code sent to the email.
+     * This creates a recovery session.
+     */
+    suspend fun verifyResetToken(email: String, token: String): Boolean {
+        return try {
+            auth.verifyEmailOtp(
+                type = OtpType.Email.RECOVERY,
+                email = email,
+                token = token,
+            )
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "OTP Verification failed", e)
+            false
+        }
+    }
+
+    suspend fun updatePassword(newPassword: String): Boolean {
+        return try {
+            client.auth.updateUser {
+                password = newPassword
+            }
+            client.auth.signOut() // Clear recovery session
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Update password failed", e)
+            false
+        }
+    }
+
+
+
+
+
+
+}
+
+
+
+

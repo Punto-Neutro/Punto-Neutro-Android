@@ -7,15 +7,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.sprint_2_kotlin"
+    namespace = "com.puntoneutro"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.sprint_2_kotlin"
+        applicationId = "com.puntoneutro"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -23,10 +23,14 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -52,6 +56,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt:3.2.4")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:3.2.4")
     implementation("io.github.jan-tennert.supabase:storage-kt:3.2.4")
+    implementation("io.github.jan-tennert.supabase:functions-kt:3.2.4")
     implementation("io.ktor:ktor-client-android:3.2.2")
 
     //dependency for serialization, to transform Supabase data into serialized objects

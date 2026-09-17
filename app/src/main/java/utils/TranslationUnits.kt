@@ -2,7 +2,7 @@ package utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import com.example.sprint_2_kotlin.R
+import com.puntoneutro.R
 
 /**
  * Maps a category name from the database to a translatable string resource.
@@ -21,6 +21,8 @@ fun getTranslatedCategoryName(categoryName: String): String {
         "climate" -> R.string.category_climate
         "business" -> R.string.category_business
         "technology" -> R.string.category_technology
+        "health" -> R.string.category_health
+        "daily" -> R.string.category_daily
         // Add other categories here
         else -> -1 // Default case for unknown categories
     }

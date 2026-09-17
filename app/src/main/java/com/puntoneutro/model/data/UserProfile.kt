@@ -1,0 +1,13 @@
+package com.puntoneutro.model.data
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class UserProfile(
+
+    val user_auth_id: String? = "",
+    val user_auth_email: String = "",
+    val country_id: Int= 0,
+    val user_profile_id: String = "",
+
+)

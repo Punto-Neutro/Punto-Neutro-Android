@@ -9,9 +9,12 @@
     <string name="Achievements">Achievements</string>
     <string name="Coming_soon">Coming soon...</string>
     <string name="Confirm_logout">Confirm logout</string>
-
+    <string name="Contact_us">Contact us</string>
     <string name="Are_sure_you_want_to_log_out">Are you sure you want to log out? You will need to sign in again next time.</string>
     <string name="Logout">Logout</string>
+    <string name="Delete_account">Delete account</string>
+    <string name="Confirm_delete">Confirm elimination of account</string>
+    <string name="Are_sure_you_want_to_delete">Are you sure you want to delete your account? You will need to create a new one.</string>
 
     <string name="Settings">Settings</string>
     <string name="Dark_mode">Dark mode</string>
@@ -95,6 +98,7 @@
 
     <string name="password_updated_success">Password updated successfully!</string>
     <string name="return_to_login">Return to Login</string>
+    <string name="email_not_found">Email not found</string>
 
 
 
@@ -108,6 +112,7 @@
     <string name="category_climate">Climate</string>
     <string name="category_business">Business</string>
     <string name="category_technology">Technology</string>
+    <string name="category_daily">Daily</string>
     <string name="All">all</string>
     <string name="No_results">No results</string>
     <string name="No_news_found_for">No news found for </string>
@@ -435,4 +440,7 @@
 
 
 
+    <string name="select_country_error">Please select a country.</string>
+    <string name="password_length_error">Password must be at least 6 characters.</string>
+    <string name="register_success_msg">Register successful verify email before logging in</string>
 </resources>

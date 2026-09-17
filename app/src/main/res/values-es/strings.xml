@@ -10,9 +10,13 @@
     <string name="Achievements">Logros</string>
     <string name="Coming_soon">Proximamente...</string>
     <string name="Confirm_logout">Confirmar cierre de sesión</string>
-
+    <string name="Contact_us">Contactanos</string>
     <string name="Are_sure_you_want_to_log_out">¿Estas seguro de cerrar sesión? necesitarás volver a iniciar sesión </string>
     <string name="Logout">Cerrar sesión</string>
+    <string name="Delete_account">Eliminar cuenta</string>
+    <string name="Confirm_delete">Confirmar eliminación de cuenta</string>
+    <string name="Are_sure_you_want_to_delete">¿Estas seguro de eliminar la cuenta? necesitarás volver a crear una </string>
+
 
     <string name="Settings">Configuraciones</string>
     <string name="Dark_mode">Modo oscuro</string>
@@ -87,6 +91,7 @@
 
     <string name="password_updated_success">¡Contraseña actualizada con éxito!</string>
     <string name="return_to_login">Volver al Inicio</string>
+    <string name="email_not_found">Email no encontrado</string>
 
 
     <!-- News Feed -->
@@ -98,6 +103,7 @@
     <string name="category_climate">Clima</string>
     <string name="category_business">Negocios</string>
     <string name="category_technology">Tecnología</string>
+    <string name="category_daily">Cotidiano</string>
     <string name="All">Todos</string>
     <string name="No_results">Sin resultados</string>
     <string name="No_news_found_for">No hay noticias para </string>
@@ -421,4 +427,7 @@
 
 
 
-    </resources>
+    <string name="select_country_error">Por favor, selecciona un país.</string>
+    <string name="password_length_error">La contraseña debe tener al menos 6 caracteres.</string>
+    <string name="register_success_msg">Registro exitoso, verifica tu correo antes de iniciar sesión</string>
+</resources>
